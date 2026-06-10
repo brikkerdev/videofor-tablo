@@ -31,7 +31,7 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # Симуляторы для разработки: docker compose --profile sim up
+  # Симулятор Видеофора для разработки: docker compose --profile sim up
   videofor-sim:
     build: .
     command: python -m simulator.videofor_sim
@@ -41,12 +41,6 @@ services:
     depends_on:
       app:
         condition: service_healthy
-    profiles: [sim]
-    restart: unless-stopped
-
-  tablo-sim:
-    build: .
-    command: uvicorn simulator.tablo_sim:app --host 0.0.0.0 --port 9000
     profiles: [sim]
     restart: unless-stopped
 

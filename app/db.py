@@ -95,6 +95,19 @@ class Database:
                         value,
                     )
 
+    async def get_config(self, key: str) -> str | None:
+        return await self.pool.fetchval(
+            "SELECT value FROM config WHERE key = $1", key
+        )
+
+    async def set_config(self, key: str, value: str) -> None:
+        await self.pool.execute(
+            "INSERT INTO config (key, value) VALUES ($1, $2) "
+            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
+            key,
+            value,
+        )
+
     async def is_dirty(self) -> bool:
         return await self.pool.fetchval(
             "SELECT coalesce("

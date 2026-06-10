@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Табло — настройка вывода</title>
+</head>
+<body>
+  <h1>Настройка вывода на табло</h1>
+  <p id="status"></p>
+
+  <fieldset>
+    <legend>Подключение к табло</legend>
+    <p>Статус: <strong id="tablo-state">проверка…</strong></p>
+    <p><small id="tablo-detail"></small></p>
+    <button id="btn-reconnect">Переподключить</button>
+    <button id="btn-status">Обновить статус</button>
+  </fieldset>
+
+  <!-- Шрифты табло (из docs/tablo-api.md, fontlist шлюза) -->
+  <datalist id="fonts">
+    <option value="SimHei"></option>
+    <option value="Times New Roman"></option>
+    <option value="Verdana"></option>
+    <option value="Tahoma"></option>
+    <option value="NSimSun"></option>
+    <option value="Arial"></option>
+    <option value="SimSun"></option>
+    <option value="KaiTi"></option>
+    <option value="DigifaceWide"></option>
+    <option value="Georgia"></option>
+    <option value="Segoe UI"></option>
+  </datalist>
+  <datalist id="colors">
+    <option value="0xffffffff">Белый</option>
+    <option value="0xffff0000">Красный</option>
+    <option value="0xff00ff00">Зелёный</option>
+    <option value="0xff0000ff">Синий</option>
+    <option value="0xffffff00">Жёлтый</option>
+    <option value="0xff00ffff">Голубой</option>
+  </datalist>
+
+  <fieldset>
+    <legend>Верхняя панель</legend>
+    <label><input type="checkbox" id="tp_enabled" /> Показывать верхнюю панель</label><br />
+    <label><input type="checkbox" id="tp_clock" /> Дата и время</label>
+    <input id="tp_dtfmt" size="14" title="формат strftime" /><br />
+    <label><input type="checkbox" id="tp_online" /> Индикатор онлайн</label>
+    онлайн: <input id="tp_on" size="4" /> офлайн: <input id="tp_off" size="4" /><br />
+    <label>Текст: <input id="tp_text" size="20" /></label><br />
+    <label>Выравнивание:
+      <select id="tp_align">
+        <option value="left">слева</option>
+        <option value="center">по центру</option>
+        <option value="right">справа</option>
+      </select>
+    </label>
+    <label>Шрифт: <input id="tp_font" list="fonts" /></label>
+    <label>Кегль: <input type="number" id="tp_size" min="6" max="99" style="width:5em" /></label>
+    <label>Высота: <input type="number" id="tp_height" min="8" max="48" style="width:5em" /></label>
+    <label>Цвет: <input id="tp_color" list="colors" size="12" /></label>
+    <label>Анимация: <input type="number" id="tp_stunt" min="0" max="100" style="width:5em" /></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Общие параметры строк</legend>
+    <label>Выравнивание:
+      <select id="g_align">
+        <option value="left">слева</option>
+        <option value="center">по центру</option>
+        <option value="right">справа</option>
+      </select>
+    </label>
+    <label>Столбцы:
+      <select id="g_columns">
+        <option value="1">1</option>
+        <option value="2">2</option>
+      </select>
+    </label>
+    <label>Шрифт: <input id="g_font" list="fonts" /></label>
+    <label>Кегль: <input type="number" id="g_size" min="6" max="99" style="width:5em" /></label>
+    <label>Анимация: <input type="number" id="g_stunt" min="0" max="100" style="width:5em" /></label>
+    <label>Окно «онлайн», сек: <input type="number" id="g_window" min="10" style="width:6em" /></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Показатели (что выводить)</legend>
+    <table id="lines" border="1" cellpadding="3">
+      <thead><tr>
+        <th>Показывать</th><th>Показатель</th><th>Ключ</th><th>Цвет</th>
+        <th>Порог</th><th>Условие</th><th>Цвет порога</th><th>Красить</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    <small>Порог: пусто — выключен. «Красить»: вся строка или только число.</small>
+  </fieldset>
+
+  <p>
+    <button id="btn-save">Сохранить</button>
+    <button id="btn-push">Применить на табло</button>
+    <button id="btn-preview">Обновить превью</button>
+  </p>
+
+  <fieldset>
+    <legend>Превью</legend>
+    <p>Онлайн: <span id="pv-online">—</span></p>
+    <canvas id="pv-canvas" width="512" height="192" style="border:1px solid #000;background:#000"></canvas>
+    <pre id="pv-text"></pre>
+  </fieldset>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let CFG = null; // {board, indicators, device}
+
+    function setStatus(msg) { $("status").textContent = msg; }
+
+    async function loadConfig() {
+      const r = await fetch("/api/display/config");
+      CFG = await r.json();
+      fillForm();
+      await loadPreview();
+    }
+
+    function fillForm() {
+      const tp = CFG.board.top_panel;
+      $("tp_enabled").checked = tp.enabled;
+      $("tp_clock").checked = tp.show_clock;
+      $("tp_dtfmt").value = tp.datetime_format;
+      $("tp_online").checked = tp.show_online;
+      $("tp_on").value = tp.online_text;
+      $("tp_off").value = tp.offline_text;
+      $("tp_text").value = tp.text;
+      $("tp_font").value = tp.fontname;
+      $("tp_size").value = tp.fontsize;
+      $("tp_height").value = tp.height;
+      $("tp_color").value = tp.color;
+      $("tp_stunt").value = tp.stunt;
+      $("tp_align").value = tp.align || "left";
+
+      $("g_align").value = CFG.board.align || "left";
+      $("g_columns").value = String(CFG.board.columns || 1);
+      $("g_font").value = CFG.board.fontname;
+      $("g_size").value = CFG.board.fontsize;
+      $("g_stunt").value = CFG.board.stunt;
+      $("g_window").value = CFG.board.online_window_seconds;
+
+      const byKey = {};
+      CFG.board.lines.forEach((l) => (byKey[l.key] = l));
+      const tbody = $("lines").querySelector("tbody");
+      tbody.innerHTML = "";
+      const opOptions = [">=", ">", "<=", "<", "=="]
+        .map((o) => `<option value="${o}">${o}</option>`).join("");
+      CFG.indicators.forEach((ind) => {
+        const ln = byKey[ind.key] || { enabled: true, color: "0xffffffff" };
+        const th = ln.threshold || {};
+        const tr = document.createElement("tr");
+        tr.dataset.key = ind.key;
+        tr.innerHTML =
+          `<td><input type="checkbox" class="ln-en" ${ln.enabled ? "checked" : ""}/></td>` +
+          `<td>${ind.display_name}</td>` +
+          `<td>${ind.key}</td>` +
+          `<td><input class="ln-color" list="colors" size="12" value="${ln.color}"/></td>` +
+          `<td><input type="number" class="ln-th-value" style="width:5em" value="${th.value ?? ""}"/></td>` +
+          `<td><select class="ln-th-op">${opOptions}</select></td>` +
+          `<td><input class="ln-th-color" list="colors" size="12" value="${th.color || "0xffff0000"}"/></td>` +
+          `<td><select class="ln-th-target"><option value="line">строку</option><option value="value">число</option></select></td>`;
+        tbody.appendChild(tr);
+        tr.querySelector(".ln-th-op").value = th.op || ">=";
+        tr.querySelector(".ln-th-target").value = th.target || "line";
+      });
+    }
+
+    function collectBoard() {
+      const lines = [];
+      $("lines").querySelectorAll("tbody tr").forEach((tr) => {
+        const thv = tr.querySelector(".ln-th-value").value.trim();
+        const threshold = thv === "" ? null : {
+          value: Number(thv),
+          op: tr.querySelector(".ln-th-op").value,
+          color: tr.querySelector(".ln-th-color").value.trim(),
+          target: tr.querySelector(".ln-th-target").value,
+        };
+        lines.push({
+          key: tr.dataset.key,
+          enabled: tr.querySelector(".ln-en").checked,
+          color: tr.querySelector(".ln-color").value.trim(),
+          threshold: threshold,
+        });
+      });
+      return {
+        top_panel: {
+          enabled: $("tp_enabled").checked,
+          show_clock: $("tp_clock").checked,
+          show_online: $("tp_online").checked,
+          text: $("tp_text").value,
+          datetime_format: $("tp_dtfmt").value,
+          online_text: $("tp_on").value,
+          offline_text: $("tp_off").value,
+          align: $("tp_align").value,
+          color: $("tp_color").value.trim(),
+          fontname: $("tp_font").value,
+          fontsize: Number($("tp_size").value),
+          height: Number($("tp_height").value),
+          stunt: Number($("tp_stunt").value),
+        },
+        lines: lines,
+        columns: Number($("g_columns").value),
+        align: $("g_align").value,
+        fontname: $("g_font").value,
+        fontsize: Number($("g_size").value),
+        stunt: Number($("g_stunt").value),
+        online_window_seconds: Number($("g_window").value),
+      };
+    }
+
+    async function save() {
+      const body = collectBoard();
+      const r = await fetch("/api/display/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (r.ok) {
+        CFG.board = (await r.json()).board;
+        setStatus("Сохранено");
+        await loadPreview();
+      } else {
+        setStatus("Ошибка сохранения: " + r.status);
+      }
+    }
+
+    async function pushNow() {
+      const r = await fetch("/api/display/push", { method: "POST" });
+      setStatus(r.ok ? "Отправлено на табло" : "Ошибка отправки: " + r.status);
+    }
+
+    function argbToCss(s) {
+      // 0xAARRGGBB -> #RRGGBB
+      const m = /^0x[0-9a-fA-F]{2}([0-9a-fA-F]{6})$/.exec(s || "");
+      return m ? "#" + m[1] : "#ffffff";
+    }
+
+    function drawPreview(areas, dev) {
+      const c = $("pv-canvas");
+      const ctx = c.getContext("2d");
+      const sx = c.width / (dev.width || 256);
+      const sy = c.height / (dev.height || 96);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, c.width, c.height);
+      areas.forEach((a) => {
+        const x = a.x * sx, y = a.y * sy, w = a.w * sx, h = a.h * sy;
+        ctx.strokeStyle = "#444";
+        ctx.strokeRect(x, y, w, h);
+        ctx.fillStyle = argbToCss(a.fontcolor);
+        const fs = Math.max(8, a.fontsize * sy);
+        ctx.font = fs + "px " + (a.fontname || "sans-serif");
+        // матрица центрирует текст в зоне — повторяем в превью
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        ctx.fillText(a.msg, x + w / 2, y + h / 2);
+      });
+      ctx.textAlign = "left";
+    }
+
+    async function loadPreview() {
+      const r = await fetch("/api/display/preview");
+      const p = await r.json();
+      $("pv-online").textContent = p.online ? "да" : "нет";
+      $("pv-text").textContent = p.text;
+      // числа приходят строками — приведём для отрисовки
+      const areas = p.areas.map((a) => ({
+        ...a, x: +a.x, y: +a.y, w: +a.w, h: +a.h, fontsize: +a.fontsize,
+      }));
+      drawPreview(areas, CFG.device);
+    }
+
+    async function loadTabloStatus() {
+      let s;
+      try {
+        const r = await fetch("/api/tablo/status");
+        s = await r.json();
+      } catch (e) {
+        $("tablo-state").textContent = "ошибка запроса статуса";
+        $("tablo-state").style.color = "red";
+        return;
+      }
+      const el = $("tablo-state");
+      if (!s.reachable) {
+        el.textContent = "НЕТ СВЯЗИ со шлюзом";
+        el.style.color = "red";
+      } else if (!s.connected) {
+        el.textContent = "шлюз есть, матрица НЕ подключена";
+        el.style.color = "orange";
+      } else {
+        const d = s.device || {};
+        el.textContent = `подключено (${d.width}x${d.height}, яркость ${d.brightness})`;
+        el.style.color = "green";
+      }
+      const lp = s.last_push || {};
+      let push = "доставка: ещё не было";
+      if (lp.at) {
+        push = lp.ok
+          ? `доставка OK в ${lp.at}`
+          : `доставка ОШИБКА в ${lp.at}: ${lp.error}`;
+      }
+      $("tablo-detail").textContent = `${s.url || "TABLO_URL не задан"} · ${push}`;
+    }
+
+    async function reconnect() {
+      setStatus("переподключение…");
+      try {
+        const r = await fetch("/api/tablo/reconnect", { method: "POST" });
+        const j = await r.json();
+        setStatus(j.connected ? "переподключено" : "переподключение не удалось");
+      } catch (e) {
+        setStatus("ошибка переподключения: " + e);
+      }
+      await loadTabloStatus();
+    }
+
+    $("btn-save").addEventListener("click", save);
+    $("btn-push").addEventListener("click", pushNow);
+    $("btn-preview").addEventListener("click", loadPreview);
+    $("btn-reconnect").addEventListener("click", reconnect);
+    $("btn-status").addEventListener("click", loadTabloStatus);
+    loadConfig().catch((e) => setStatus("Ошибка загрузки: " + e));
+    loadTabloStatus();
+    setInterval(loadTabloStatus, 10000);
+  </script>
+</body>
+</html>

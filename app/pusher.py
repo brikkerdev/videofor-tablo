@@ -2,49 +2,92 @@ import asyncio
 import logging
 
 from .db import Database
-from .render import render_text
+from .models import BoardConfig
+from .render import BOARD_H, BOARD_W, render_areas
 from .state import StateCache
 from .tablo import TabloClient
 
 logger = logging.getLogger("app.pusher")
 
-DAY_CHECK_SECONDS = 60
+TICK_SECONDS = 30  # период проверки дня и обновления часов верхней панели
+MIN_PUSH_INTERVAL = 2.0  # не чаще: ESP32 захлёбывается частыми message.json
 
 
 class Pusher:
     """Фоновая доставка состояния на табло.
 
-    Спит на asyncio.Event, БД не опрашивает. Просыпается по событию
-    либо раз в минуту для проверки смены календарного дня.
+    Спит на asyncio.Event, БД не опрашивает. Просыпается по событию,
+    при изменении конфигурации вывода и раз в TICK_SECONDS — чтобы
+    сдвинуть часы верхней панели и проверить смену дня.
     """
 
     def __init__(
-        self, tablo: TabloClient, db: Database, state: StateCache, retry_seconds: int
+        self,
+        tablo: TabloClient,
+        db: Database,
+        state: StateCache,
+        board: BoardConfig,
+        retry_seconds: int,
+        width: int = BOARD_W,
+        height: int = BOARD_H,
     ):
         self.tablo = tablo
         self.db = db
         self.state = state
+        self.board = board
         self.retry_seconds = retry_seconds
+        self.width = width
+        self.height = height
         self._dirty = asyncio.Event()
+        self._last_push_t = 0.0  # время последней доставки (loop.time)
+        # результат последней доставки для статуса на фронтенде
+        self.last_ok: bool | None = None
+        self.last_error: str = ""
+        self.last_push_at = None
 
     def mark_dirty(self) -> None:
         self._dirty.set()
 
+    def _clock_running(self) -> bool:
+        return self.board.top_panel.enabled and self.board.top_panel.show_clock
+
     async def run(self) -> None:
         while True:
             try:
-                await asyncio.wait_for(self._dirty.wait(), timeout=DAY_CHECK_SECONDS)
+                await asyncio.wait_for(self._dirty.wait(), timeout=TICK_SECONDS)
             except asyncio.TimeoutError:
-                if not self.state.rollover_if_needed():
-                    continue
+                self.state.rollover_if_needed()
+                if not self._clock_running():
+                    continue  # нет часов и нет событий — ничего не шлём
+            # дебаунс: коалесим всплески событий в один push
+            loop = asyncio.get_running_loop()
+            wait = MIN_PUSH_INTERVAL - (loop.time() - self._last_push_t)
+            if wait > 0:
+                await asyncio.sleep(wait)
             self._dirty.clear()
             self.state.rollover_if_needed()
-            text = render_text(self.state.indicators, self.state.values)
+            online = self.state.is_online(self.board.online_window_seconds)
+            areas = render_areas(
+                self.state.indicators,
+                self.state.values,
+                self.board,
+                self.state.now(),
+                online,
+                self.width,
+                self.height,
+            )
             try:
-                await self.tablo.push(text, self.state.snapshot())
+                await self.tablo.push_areas(areas)
                 await self.db.set_pushed_at()
-                logger.info("Состояние доставлено на табло")
+                self._last_push_t = asyncio.get_running_loop().time()
+                self.last_ok = True
+                self.last_error = ""
+                self.last_push_at = self.state.now()
+                logger.info("Состояние доставлено на табло (%d областей)", len(areas))
             except Exception as exc:
+                self.last_ok = False
+                self.last_error = str(exc)
+                self.last_push_at = self.state.now()
                 logger.warning("Push на табло не удался: %s", exc)
                 self._dirty.set()
                 await asyncio.sleep(self.retry_seconds)

@@ -23,9 +23,16 @@ class StateCache:
         self.indicators: list[Indicator] = []
         self.values: dict[str, int] = {}
         self.updated_at: datetime | None = None
+        self.last_event_at: datetime | None = None
 
     def now(self) -> datetime:
         return datetime.now(self.tz)
+
+    def is_online(self, window_seconds: int) -> bool:
+        """Считаем источник онлайн, если событие приходило недавно."""
+        if not self.last_event_at:
+            return False
+        return (self.now() - self.last_event_at).total_seconds() <= window_seconds
 
     def today(self) -> date:
         return self.now().date()
