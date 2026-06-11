@@ -35,6 +35,7 @@ class TopPanel(BaseModel):
     fontsize: int = 14
     height: int = 16
     stunt: int = 0
+    brightness: int = Field(default=255, ge=0, le=255)
 
 
 class Threshold(BaseModel):
@@ -54,6 +55,7 @@ class LineConfig(BaseModel):
     key: str
     enabled: bool = True
     color: str = "0xffffffff"
+    brightness: int = Field(default=255, ge=0, le=255)
     threshold: Threshold | None = None
 
 
@@ -66,6 +68,7 @@ class BoardConfig(BaseModel):
     fontsize: int = 16
     stunt: int = 0
     online_window_seconds: int = 120
+    screen_brightness: int = Field(default=255, ge=0, le=255)
 
     def line(self, key: str) -> LineConfig:
         for ln in self.lines:

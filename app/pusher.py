@@ -40,12 +40,14 @@ class Pusher:
         self.height = height
         self._dirty = asyncio.Event()
         self._last_push_t = 0.0  # время последней доставки (loop.time)
+        self.paused: bool = False   # True после clear до следующего push
         # результат последней доставки для статуса на фронтенде
         self.last_ok: bool | None = None
         self.last_error: str = ""
         self.last_push_at = None
 
     def mark_dirty(self) -> None:
+        self.paused = False
         self._dirty.set()
 
     def _clock_running(self) -> bool:
@@ -65,6 +67,8 @@ class Pusher:
             if wait > 0:
                 await asyncio.sleep(wait)
             self._dirty.clear()
+            if self.paused:
+                continue
             self.state.rollover_if_needed()
             online = self.state.is_online(self.board.online_window_seconds)
             areas = render_areas(

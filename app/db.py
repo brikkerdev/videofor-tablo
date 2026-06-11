@@ -108,6 +108,14 @@ class Database:
             value,
         )
 
+    async def set_counter_value(self, day: date, key: str, value: int) -> None:
+        await self.pool.execute(
+            "INSERT INTO counter_values (day, indicator_key, value) VALUES ($1, $2, $3) "
+            "ON CONFLICT (day, indicator_key) "
+            "DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
+            day, key, value,
+        )
+
     async def is_dirty(self) -> bool:
         return await self.pool.fetchval(
             "SELECT coalesce("

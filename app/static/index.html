@@ -115,6 +115,22 @@ select.form-input { min-width:120px }
 .lines-table td { padding:6px 10px; border-bottom:1px solid #f5f5f5; vertical-align:middle }
 .lines-table tr:last-child td { border-bottom:none }
 
+/* ── Adjust buttons ── */
+.adj-btn {
+  border:none; border-radius:4px; padding:4px 8px; font-size:12px;
+  font-weight:500; cursor:pointer; font-family:Roboto,sans-serif; line-height:1.4;
+}
+.adj-neg { background:#fce4ec; color:#c62828; }
+.adj-neg:hover { background:#f8bbd0; }
+.adj-pos { background:#e8f5e9; color:#2e7d32; }
+.adj-pos:hover { background:#c8e6c9; }
+
+/* ── Color picker ── */
+input[type=color].color-pick {
+  width:32px; height:28px; padding:2px 3px; cursor:pointer;
+  border:1px solid #bdbdbd; border-radius:4px; background:#fff;
+}
+
 /* ── Spinner ── */
 @keyframes spin { to { transform:rotate(360deg) } }
 .spin { display:inline-block; animation:spin 1s linear infinite }
@@ -337,8 +353,14 @@ select.form-input { min-width:120px }
             <div class="q-card" style="border-radius:4px">
               <div class="q-card__section q-card__section--vert">
                 <div style="font-size:11px;font-weight:500;color:#9e9e9e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">{{ ind.display_name }}</div>
-                <div style="font-size:56px;font-weight:300;color:var(--q-primary);line-height:1;margin-bottom:6px;letter-spacing:-1px">{{ ind.value }}</div>
-                <div style="font-size:12px;color:#bdbdbd">{{ stateData.date }}</div>
+                <div style="font-size:56px;font-weight:300;color:var(--q-primary);line-height:1;letter-spacing:-1px">{{ ind.value }}</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:10px;flex-wrap:wrap">
+                  <button class="adj-btn adj-neg" @click="adjust(ind.key, -adjustStep)" type="button">−{{ adjustStep }}</button>
+                  <button class="adj-btn adj-neg" @click="adjust(ind.key, -1)" type="button">−1</button>
+                  <button class="adj-btn adj-pos" @click="adjust(ind.key, 1)" type="button">+1</button>
+                  <button class="adj-btn adj-pos" @click="adjust(ind.key, adjustStep)" type="button">+{{ adjustStep }}</button>
+                  <input type="number" class="form-input" v-model.number="adjustStep" min="1" max="9999" style="width:4.5em;text-align:center" title="Шаг">
+                </div>
               </div>
             </div>
           </div>
@@ -415,6 +437,11 @@ select.form-input { min-width:120px }
             <div class="form-row">
               <span class="form-label">Цвет</span>
               <input class="form-input" v-model="cfg.board.top_panel.color" list="colors" style="width:13em">
+              <input type="color" class="color-pick"
+                     :value="argbToHex(cfg.board.top_panel.color)"
+                     @input="cfg.board.top_panel.color = hexToArgb($event.target.value, cfg.board.top_panel.color)">
+              <span style="font-size:13px;color:#757575;margin-left:12px">Яркость</span>
+              <input type="number" class="form-input" v-model.number="cfg.board.top_panel.brightness" min="0" max="255">
               <span style="font-size:13px;color:#757575;margin-left:12px">Анимация</span>
               <input type="number" class="form-input" v-model.number="cfg.board.top_panel.stunt" min="0" max="100">
             </div>
@@ -467,6 +494,7 @@ select.form-input { min-width:120px }
                     <th>Показатель</th>
                     <th>Ключ</th>
                     <th>Цвет</th>
+                    <th>Яркость</th>
                     <th>Порог</th>
                     <th>Условие</th>
                     <th>Цвет порога</th>
@@ -478,7 +506,17 @@ select.form-input { min-width:120px }
                     <td><input type="checkbox" class="form-input" v-model="cfg.board.lines[i].enabled"></td>
                     <td style="font-weight:500">{{ ln.display_name }}</td>
                     <td style="font-family:monospace;font-size:12px;color:#757575">{{ ln.key }}</td>
-                    <td><input class="form-input" v-model="cfg.board.lines[i].color" list="colors" style="width:11em"></td>
+                    <td>
+                      <div style="display:flex;gap:4px;align-items:center">
+                        <input class="form-input" v-model="cfg.board.lines[i].color" list="colors" style="width:11em">
+                        <input type="color" class="color-pick"
+                               :value="argbToHex(cfg.board.lines[i].color)"
+                               @input="cfg.board.lines[i].color = hexToArgb($event.target.value, cfg.board.lines[i].color)">
+                      </div>
+                    </td>
+                    <td>
+                      <input type="number" class="form-input" v-model.number="cfg.board.lines[i].brightness" min="0" max="255" style="width:4.5em">
+                    </td>
                     <td>
                       <input type="number" class="form-input"
                              :value="cfg.board.lines[i].threshold?.value ?? ''"
@@ -495,10 +533,15 @@ select.form-input { min-width:120px }
                       </select>
                     </td>
                     <td>
-                      <input class="form-input"
-                             :value="cfg.board.lines[i].threshold?.color ?? '0xffff0000'"
-                             @input="setThreshold(i,'color',$event.target.value)"
-                             list="colors" style="width:11em">
+                      <div style="display:flex;gap:4px;align-items:center">
+                        <input class="form-input"
+                               :value="cfg.board.lines[i].threshold?.color ?? '0xffff0000'"
+                               @input="setThreshold(i,'color',$event.target.value)"
+                               list="colors" style="width:11em">
+                        <input type="color" class="color-pick"
+                               :value="argbToHex(cfg.board.lines[i].threshold?.color ?? '0xffff0000')"
+                               @input="setThreshold(i,'color',$event.target.value.replace('#','0xff'))">
+                      </div>
                     </td>
                     <td>
                       <select class="form-input"
@@ -514,6 +557,25 @@ select.form-input { min-width:120px }
             </div>
             <div style="font-size:12px;color:#9e9e9e;margin-top:8px">
               Порог: пусто — выключен. «Красить»: вся строка или только число.
+            </div>
+          </div>
+        </div>
+
+        <!-- Screen brightness -->
+        <div class="q-card q-mb-md" style="border-radius:4px">
+          <div class="q-card__section q-card__section--vert">
+            <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
+              Яркость экрана
+            </div>
+            <div class="form-row">
+              <span class="form-label">Аппаратная яркость</span>
+              <input type="range" min="0" max="255" step="1"
+                     v-model.number="cfg.board.screen_brightness"
+                     @change="setBrightness(cfg.board.screen_brightness)"
+                     style="width:180px;cursor:pointer">
+              <input type="number" class="form-input" v-model.number="cfg.board.screen_brightness"
+                     @change="setBrightness(cfg.board.screen_brightness)" min="0" max="255" style="width:4.5em">
+              <span style="font-size:12px;color:#9e9e9e">0 — выкл, 255 — макс</span>
             </div>
           </div>
         </div>
@@ -620,10 +682,11 @@ createApp({
     const cfg       = ref(null);   // {board, indicators, device}
     const stateData = ref(null);   // /api/state
     const status    = ref(null);   // /api/tablo/status
-    const saving    = ref(false);
-    const pushing   = ref(false);
-    const clearing  = ref(false);
-    const cvs       = ref(null);   // canvas ref
+    const saving      = ref(false);
+    const pushing     = ref(false);
+    const clearing    = ref(false);
+    const adjustStep  = ref(10);
+    const cvs         = ref(null);   // canvas ref
 
     /* ── computed: status card ── */
     const connDot = computed(() => {
@@ -746,6 +809,45 @@ createApp({
       } catch (e) { toast('err', 'Ошибка переподключения: ' + e.message); }
     };
 
+    /* ── Color helpers: 0xAARRGGBB <-> #RRGGBB ── */
+    const argbToHex = (argb) => {
+      const m = /^0x[0-9a-f]{2}([0-9a-f]{6})$/i.exec(argb || '');
+      return m ? '#' + m[1] : '#ffffff';
+    };
+    const hexToArgb = (hex, current) => {
+      const am = /^0x([0-9a-f]{2})/i.exec(current || '');
+      const alpha = am ? am[1] : 'ff';
+      return '0x' + alpha + hex.replace('#', '').toLowerCase();
+    };
+
+    /* ── Manual adjust ── */
+    const adjust = async (key, delta) => {
+      try {
+        const r = await fetch('/api/state/adjust', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, delta }),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        if (stateData.value) {
+          const ind = stateData.value.indicators.find(i => i.key === key);
+          if (ind) ind.value = data.value;
+        }
+      } catch (e) { toast('err', 'Ошибка корректировки: ' + e.message); }
+    };
+
+    /* ── Screen brightness ── */
+    const setBrightness = async (val) => {
+      try {
+        await fetch('/api/tablo/brightness', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: val }),
+        });
+      } catch { /* silent */ }
+    };
+
     /* ── Threshold helper ── */
     const setThreshold = (i, field, val) => {
       const ln = cfg.value.board.lines[i];
@@ -857,11 +959,13 @@ createApp({
       mini, devOpen, repOpen,
       topNav, devNav, repNav, bottomNav,
       tab, cfg, stateData, status,
-      saving, pushing, clearing, cvs,
+      saving, pushing, clearing, adjustStep, cvs,
       connDot, connLabel, statusDetail, lastPushLine, deviceLabel,
       linesWithMeta,
       loadConfig, loadState, loadStatus, loadPreview,
       save, pushNow, saveAndPush, clearBoard, reconnect,
+      adjust, setBrightness,
+      argbToHex, hexToArgb,
       setThreshold,
       toasts,
     };

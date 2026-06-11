@@ -1,4 +1,5 @@
 import math
+import re
 from datetime import datetime
 
 from .models import BoardConfig
@@ -8,6 +9,13 @@ BOARD_W = 256
 BOARD_H = 96
 
 MIN_FONT = 6
+
+
+def _with_brightness(color: str, brightness: int) -> str:
+    if brightness >= 255:
+        return color
+    m = re.match(r'^0x[0-9a-fA-F]{2}([0-9a-fA-F]{6})$', color or '', re.IGNORECASE)
+    return f'0x{brightness:02x}{m.group(1)}' if m else color
 CHAR_W_RATIO = 0.85  # оценка ширины символа от кегля (с запасом)
 TEXT_PAD = 10  # запас, чтобы прошивка не пускала текст по кругу
 
@@ -105,11 +113,11 @@ def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h) -> list[dict]
         bx = slot_x
     bx = min(max(slot_x, bx), slot_x + col_w - total)
 
-    label_color = value_color = ln.color
+    label_color = value_color = _with_brightness(ln.color, ln.brightness)
     if alert and th is not None:
-        value_color = th.color
+        value_color = _with_brightness(th.color, ln.brightness)
         if th.target == "line":
-            label_color = th.color
+            label_color = value_color
 
     return [
         _area(label, bx, y, lw, line_h, board.fontname, fs, label_color, board.stunt),
@@ -141,9 +149,10 @@ def render_areas(
         msg = _top_text(board.top_panel, now, online)
         fs = _fit_font(board.top_panel.fontsize, top_h)
         zx, zw = _align_zone(0, width, msg, fs, board.top_panel.align)
+        top_color = _with_brightness(board.top_panel.color, board.top_panel.brightness)
         areas.append(
             _area(msg, zx, 0, zw, top_h, board.top_panel.fontname, fs,
-                  board.top_panel.color, board.top_panel.stunt)
+                  top_color, board.top_panel.stunt)
         )
 
     visible = [ind for ind in indicators if board.line(ind.key).enabled]

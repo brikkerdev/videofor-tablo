@@ -195,6 +195,24 @@ class TabloClient:
                 await asyncio.sleep(INTER_BATCH_DELAY)
         self._last_max = count - 1 if count else None
 
+    async def set_brightness(self, value: int) -> bool:
+        """POST /brightness.json — set display brightness 0-255."""
+        if not self.base_url:
+            return False
+        try:
+            async with self._req_lock:
+                resp = await self._client.post(
+                    self._url("brightness.json"),
+                    json={"brightness": value},
+                )
+            resp.raise_for_status()
+            if self.device is not None:
+                self.device["brightness"] = value
+            return True
+        except Exception as exc:
+            logger.warning("set_brightness failed: %s", exc)
+            return False
+
     async def close(self) -> None:
         await self._stop_sse()
         await self._client.aclose()

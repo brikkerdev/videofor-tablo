@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from .config import settings
 from .db import Database
@@ -220,9 +221,13 @@ async def push_display(request: Request):
 @app.post("/api/display/clear")
 async def clear_display(request: Request):
     tablo: TabloClient = request.app.state.tablo
+    pusher: Pusher = request.app.state.pusher
+    pusher.paused = True
+    pusher._dirty.clear()
     try:
         await tablo.push_areas([])
     except Exception as exc:
+        pusher.paused = False
         raise HTTPException(status_code=502, detail=str(exc))
     return {"status": "ok"}
 
@@ -258,6 +263,41 @@ async def reconnect_tablo(request: Request):
     tablo: TabloClient = request.app.state.tablo
     asyncio.create_task(tablo.reconnect())
     return {"status": "ok"}
+
+
+class BrightnessIn(BaseModel):
+    value: int = Field(ge=0, le=255)
+
+
+@app.post("/api/tablo/brightness")
+async def set_brightness(body: BrightnessIn, request: Request):
+    tablo: TabloClient = request.app.state.tablo
+    ok = await tablo.set_brightness(body.value)
+    async with request.app.state.lock:
+        request.app.state.board.screen_brightness = body.value
+        await request.app.state.db.set_config(
+            CONFIG_KEY, request.app.state.board.model_dump_json()
+        )
+    return {"status": "ok" if ok else "unreachable", "value": body.value}
+
+
+class AdjustIn(BaseModel):
+    key: str
+    delta: int
+
+
+@app.post("/api/state/adjust")
+async def adjust_state(body: AdjustIn, request: Request):
+    cache: StateCache = request.app.state.cache
+    async with request.app.state.lock:
+        cache.rollover_if_needed()
+        current = cache.values.get(body.key, 0)
+        new_val = max(0, current + body.delta)
+        cache.values[body.key] = new_val
+        cache.updated_at = cache.now()
+        await request.app.state.db.set_counter_value(cache.day, body.key, new_val)
+    request.app.state.pusher.mark_dirty()
+    return {"key": body.key, "value": new_val}
 
 
 @app.get("/health")
