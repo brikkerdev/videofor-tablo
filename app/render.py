@@ -16,8 +16,8 @@ def _with_brightness(color: str, brightness: int) -> str:
         return color
     m = re.match(r'^0x[0-9a-fA-F]{2}([0-9a-fA-F]{6})$', color or '', re.IGNORECASE)
     return f'0x{brightness:02x}{m.group(1)}' if m else color
-CHAR_W_RATIO = 0.85  # оценка ширины символа от кегля (с запасом)
-TEXT_PAD = 10  # запас, чтобы прошивка не пускала текст по кругу
+CHAR_W_RATIO = 0.60  # average Cyrillic char width in LED fonts (empirical)
+TEXT_PAD = 4
 
 
 def render_text(indicators: list[Indicator], values: dict[str, int]) -> str:
@@ -92,41 +92,46 @@ def _effective_brightness(base: int, item: int) -> int:
     return min(255, int(base * item / 255))
 
 
+def _lerp(a: tuple, b: tuple, t: float) -> tuple:
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
 def _gradient_color(value: int, threshold_val: int, op: str, eff_brightness: int) -> str:
-    """Red→orange→green (or reversed for max-thresholds) based on value vs threshold.
+    """Percentage-based gradient: value/threshold → color.
 
-    For >= / >  (minimum): 0→red, T→orange, 2T+→green.
-    For <= / <  (maximum): 0→green, T→orange, 2T+→red.
+    above_is_bad (>=, >): 0%→white, 25%→white, 50%→yellow, 75%→orange, 100%+→red
+    below_is_bad (<=, <): 0%→red,   25%→orange, 50%→yellow, 75%→white,  100%+→white
     """
+    WHITE  = (255, 255, 255)
+    YELLOW = (255, 200,   0)
+    ORANGE = (255, 100,   0)
+    RED    = (255,   0,   0)
+
     t = max(1, threshold_val)
-    v = max(0, value)
-    below_is_bad = op in (">=", ">")
+    pct = max(0.0, value / t)
 
-    # compute r,g in 0-255; b always 0
-    if below_is_bad:
-        if v >= t * 2:
-            r, g = 0, 210
-        elif v >= t:
-            frac = (v - t) / t
-            r = int(255 * (1 - frac))
-            g = int(165 + 45 * frac)   # 165→210
-        else:
-            frac = v / t
-            r = 255
-            g = int(165 * frac)        # 0→165 (red→orange)
+    above_is_bad = op in (">=", ">")
+
+    if above_is_bad:
+        # high value is bad (e.g. violations)
+        kp = [(0.0, WHITE), (0.25, WHITE), (0.5, YELLOW), (0.75, ORANGE), (1.0, RED)]
     else:
-        if v >= t * 2:
-            r, g = 255, 0
-        elif v >= t:
-            frac = (v - t) / t
-            r = int(165 + 90 * frac)   # 165→255 (orange→red)
-            g = int(165 * (1 - frac))  # 165→0
-        else:
-            frac = v / t
-            r = int(165 * frac)        # 0→165 (green→orange)
-            g = 210
+        # low value is bad (e.g. instructors on track)
+        kp = [(0.0, RED), (0.25, ORANGE), (0.5, YELLOW), (0.75, WHITE), (1.0, WHITE)]
 
-    return f'0x{eff_brightness:02x}{r:02x}{g:02x}00'
+    # cap at last keypoint (solid color beyond 100%)
+    pct = min(pct, kp[-1][0])
+
+    r, g, b = kp[-1][1]
+    for i in range(len(kp) - 1):
+        p0, c0 = kp[i]
+        p1, c1 = kp[i + 1]
+        if pct <= p1:
+            f = (pct - p0) / (p1 - p0) if p1 > p0 else 1.0
+            r, g, b = _lerp(c0, c1, f)
+            break
+
+    return f'0x{eff_brightness:02x}{r:02x}{g:02x}{b:02x}'
 
 
 def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h, base_brightness: int = 255) -> list[dict]:
