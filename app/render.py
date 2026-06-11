@@ -88,10 +88,48 @@ def _area(msg, x, y, w, h, fontname, fontsize, color, stunt) -> dict:
     }
 
 
-def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h) -> list[dict]:
-    """Две раздельные зоны строки: метка и число. Раздельные всегда —
-    чтобы их можно было красить независимо. Порог красит число
-    (target=value) или обе зоны (target=line)."""
+def _effective_brightness(base: int, item: int) -> int:
+    return min(255, int(base * item / 255))
+
+
+def _gradient_color(value: int, threshold_val: int, op: str, eff_brightness: int) -> str:
+    """Red→orange→green (or reversed for max-thresholds) based on value vs threshold.
+
+    For >= / >  (minimum): 0→red, T→orange, 2T+→green.
+    For <= / <  (maximum): 0→green, T→orange, 2T+→red.
+    """
+    t = max(1, threshold_val)
+    v = max(0, value)
+    below_is_bad = op in (">=", ">")
+
+    # compute r,g in 0-255; b always 0
+    if below_is_bad:
+        if v >= t * 2:
+            r, g = 0, 210
+        elif v >= t:
+            frac = (v - t) / t
+            r = int(255 * (1 - frac))
+            g = int(165 + 45 * frac)   # 165→210
+        else:
+            frac = v / t
+            r = 255
+            g = int(165 * frac)        # 0→165 (red→orange)
+    else:
+        if v >= t * 2:
+            r, g = 255, 0
+        elif v >= t:
+            frac = (v - t) / t
+            r = int(165 + 90 * frac)   # 165→255 (orange→red)
+            g = int(165 * (1 - frac))  # 165→0
+        else:
+            frac = v / t
+            r = int(165 * frac)        # 0→165 (green→orange)
+            g = 210
+
+    return f'0x{eff_brightness:02x}{r:02x}{g:02x}00'
+
+
+def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h, base_brightness: int = 255) -> list[dict]:
     th = ln.threshold
     alert = _alert(th, val)
     label = f"{ind.display_name}:"
@@ -100,7 +138,6 @@ def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h) -> list[dict]
     lw = _text_w(label, fs)
     vw = _text_w(value, fs)
     gap = max(4, int(fs * 0.3))
-    # не вылезать за слот: при нехватке места ужимаем метку
     if lw + gap + vw > col_w:
         vw = min(vw, col_w)
         lw = max(0, col_w - gap - vw)
@@ -113,11 +150,15 @@ def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h) -> list[dict]
         bx = slot_x
     bx = min(max(slot_x, bx), slot_x + col_w - total)
 
-    label_color = value_color = _with_brightness(ln.color, ln.brightness)
-    if alert and th is not None:
-        value_color = _with_brightness(th.color, ln.brightness)
-        if th.target == "line":
-            label_color = value_color
+    eff = _effective_brightness(base_brightness, ln.brightness)
+    if ln.smooth and th is not None:
+        label_color = value_color = _gradient_color(val, th.value, th.op, eff)
+    else:
+        label_color = value_color = _with_brightness(ln.color, eff)
+        if alert and th is not None:
+            value_color = _with_brightness(th.color, eff)
+            if th.target == "line":
+                label_color = value_color
 
     return [
         _area(label, bx, y, lw, line_h, board.fontname, fs, label_color, board.stunt),
@@ -149,7 +190,8 @@ def render_areas(
         msg = _top_text(board.top_panel, now, online)
         fs = _fit_font(board.top_panel.fontsize, top_h)
         zx, zw = _align_zone(0, width, msg, fs, board.top_panel.align)
-        top_color = _with_brightness(board.top_panel.color, board.top_panel.brightness)
+        top_eff = _effective_brightness(board.screen_brightness, board.top_panel.brightness)
+        top_color = _with_brightness(board.top_panel.color, top_eff)
         areas.append(
             _area(msg, zx, 0, zw, top_h, board.top_panel.fontname, fs,
                   top_color, board.top_panel.stunt)
@@ -163,8 +205,6 @@ def render_areas(
         rows = math.ceil(n / cols)
         line_h = region_h // rows
         col_w = width // cols
-        # единый кегль: по высоте строки, затем ужимаем под ширину столбца
-        # по самой длинной строке, чтобы прошивка не гоняла текст по кругу
         fs = _fit_font(board.fontsize, line_h)
         longest = max(
             (f"{ind.display_name}: {values.get(ind.key, 0)}" for ind in visible),
@@ -178,7 +218,8 @@ def render_areas(
             val = values.get(ind.key, 0)
             areas.extend(
                 _line_areas(ind, val, ln, c * col_w, col_w, board, fs,
-                            top_h + r * line_h, line_h)
+                            top_h + r * line_h, line_h,
+                            base_brightness=board.screen_brightness)
             )
 
     # Идентификаторы подряд, значения строками — как у штатного интерфейса

@@ -56,6 +56,7 @@ class LineConfig(BaseModel):
     enabled: bool = True
     color: str = "0xffffffff"
     brightness: int = Field(default=255, ge=0, le=255)
+    smooth: bool = False  # gradient red→orange→green based on threshold value
     threshold: Threshold | None = None
 
 

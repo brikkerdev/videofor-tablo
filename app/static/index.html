@@ -492,20 +492,19 @@ input[type=color].color-pick {
                   <tr>
                     <th>Показывать</th>
                     <th>Показатель</th>
-                    <th>Ключ</th>
                     <th>Цвет</th>
                     <th>Яркость</th>
                     <th>Порог</th>
                     <th>Условие</th>
                     <th>Цвет порога</th>
                     <th>Красить</th>
+                    <th title="Плавный градиент: красный→оранжевый→зелёный относительно порога">Плавное</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(ln, i) in linesWithMeta" :key="ln.key">
                     <td><input type="checkbox" class="form-input" v-model="cfg.board.lines[i].enabled"></td>
                     <td style="font-weight:500">{{ ln.display_name }}</td>
-                    <td style="font-family:monospace;font-size:12px;color:#757575">{{ ln.key }}</td>
                     <td>
                       <div style="display:flex;gap:4px;align-items:center">
                         <input class="form-input" v-model="cfg.board.lines[i].color" list="colors" style="width:11em">
@@ -551,31 +550,32 @@ input[type=color].color-pick {
                         <option value="value">число</option>
                       </select>
                     </td>
+                    <td style="text-align:center">
+                      <input type="checkbox" class="form-input"
+                             v-model="cfg.board.lines[i].smooth"
+                             :title="cfg.board.lines[i].smooth ? 'Градиент активен — цвет строки и цвет порога игнорируются' : 'Включить плавный градиент цвета'">
+                    </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <div style="font-size:12px;color:#9e9e9e;margin-top:8px">
-              Порог: пусто — выключен. «Красить»: вся строка или только число.
-            </div>
           </div>
         </div>
 
-        <!-- Screen brightness -->
+        <!-- Base brightness -->
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
-              Яркость экрана
+              Базовая яркость
             </div>
             <div class="form-row">
-              <span class="form-label">Аппаратная яркость</span>
+              <span class="form-label">Базовая яркость экрана</span>
               <input type="range" min="0" max="255" step="1"
                      v-model.number="cfg.board.screen_brightness"
-                     @change="setBrightness(cfg.board.screen_brightness)"
                      style="width:180px;cursor:pointer">
               <input type="number" class="form-input" v-model.number="cfg.board.screen_brightness"
-                     @change="setBrightness(cfg.board.screen_brightness)" min="0" max="255" style="width:4.5em">
-              <span style="font-size:12px;color:#9e9e9e">0 — выкл, 255 — макс</span>
+                     min="0" max="255" style="width:4.5em">
+              <span style="font-size:12px;color:#9e9e9e">Итог = базовая × яркость_строки / 255</span>
             </div>
           </div>
         </div>
@@ -873,55 +873,37 @@ createApp({
       const dev = cfg.value?.device || {};
       const bw = dev.width  || 256;
       const bh = dev.height || 96;
-      const sx = c.width  / bw;
-      const sy = c.height / bh;
 
-      // background: very dark — выключенные LED чуть теплее чёрного
-      ctx.fillStyle = '#0a0800';
-      ctx.fillRect(0, 0, c.width, c.height);
+      // 1. Рендер при нативном разрешении матрицы (256×96).
+      //    Размер шрифта совпадает с реальным, текст ведёт себя как на устройстве.
+      const nat = document.createElement('canvas');
+      nat.width = bw; nat.height = bh;
+      const nc = nat.getContext('2d');
 
-      // рисуем каждую ячейку как слегка видимый "мёртвый пиксель"
-      ctx.fillStyle = 'rgba(60,30,0,0.4)';
-      for (let xi = 0; xi < bw; xi++) {
-        for (let yi = 0; yi < bh; yi++) {
-          ctx.fillRect(Math.round(xi*sx)+1, Math.round(yi*sy)+1, Math.max(1,sx-2), Math.max(1,sy-2));
-        }
-      }
+      nc.fillStyle = '#080604';
+      nc.fillRect(0, 0, bw, bh);
 
-      // areas (text zones from the LED controller layout engine)
       (p.areas || []).forEach(a => {
-        const x = +a.x * sx, y = +a.y * sy;
-        const w = +a.w * sx, h = +a.h * sy;
-        // zone border (subtle)
-        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(x, y, w, h);
-        // text
-        ctx.fillStyle = argbToCss(a.fontcolor);
-        const fs = Math.max(8, +a.fontsize * sy * 0.9);
-        ctx.font = `bold ${fs}px ${a.fontname || 'Arial'}`;
-        ctx.textBaseline = 'middle';
-        ctx.textAlign = 'center';
-        // clip to zone
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(x, y, w, h);
-        ctx.clip();
-        ctx.fillText(a.msg, x + w / 2, y + h / 2);
-        ctx.restore();
+        const x = +a.x, y = +a.y, w = +a.w, h = +a.h;
+        nc.fillStyle = argbToCss(a.fontcolor);
+        nc.font = `${Math.max(4, +a.fontsize)}px ${a.fontname || 'Arial'}`;
+        nc.textBaseline = 'middle';
+        nc.textAlign = 'center';
+        nc.save();
+        nc.beginPath(); nc.rect(x, y, w, h); nc.clip();
+        nc.fillText(a.msg, x + w / 2, y + h / 2);
+        nc.restore();
       });
 
-      // ── pixel grid: simulate LED housing between pixels (airport-board look) ──
-      // Each LED "pixel" = sx×sy canvas pixels. Draw 1px dark gap between cells.
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      for (let xi = 0; xi < bw; xi++) {
-        // right edge of each cell
-        ctx.fillRect(Math.round(xi * sx + sx - 1), 0, 1, c.height);
-      }
-      for (let yi = 0; yi < bh; yi++) {
-        // bottom edge of each cell
-        ctx.fillRect(0, Math.round(yi * sy + sy - 1), c.width, 1);
-      }
+      // 2. Масштабирование без сглаживания → каждый пиксель = блок LEDʼа
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(nat, 0, 0, c.width, c.height);
+
+      // 3. Сетка-разделитель между "пикселями" (корпус LED-матрицы)
+      const sx = c.width / bw, sy = c.height / bh;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      for (let xi = 0; xi < bw; xi++) ctx.fillRect(Math.round(xi * sx + sx - 1), 0, 1, c.height);
+      for (let yi = 0; yi < bh; yi++) ctx.fillRect(0, Math.round(yi * sy + sy - 1), c.width, 1);
     }
 
     /* ── watch tab to draw canvas when switching to overview ── */
