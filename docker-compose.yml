@@ -30,8 +30,6 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
-
-  # Симулятор Видеофора для разработки: docker compose --profile sim up
   videofor-sim:
     build: .
     command: python -m simulator.videofor_sim
