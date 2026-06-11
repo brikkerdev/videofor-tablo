@@ -5,7 +5,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles, FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
@@ -93,6 +95,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="videofor-tablo integration", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+import os as _os
+_frontend = _os.path.join(_os.path.dirname(__file__), "..", "frontend")
+if _os.path.isdir(_frontend):
+    app.mount("/ui", StaticFiles(directory=_frontend, html=True), name="frontend")
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_handler(request: Request, exc: RequestValidationError):
@@ -153,87 +167,6 @@ async def get_state(request: Request):
     cache: StateCache = request.app.state.cache
     cache.rollover_if_needed()
     return cache.snapshot()
-
-
-# --- Конфигурация вывода на табло ---------------------------------------
-
-
-@app.get("/api/display/config")
-async def get_display_config(request: Request):
-    board: BoardConfig = request.app.state.board
-    cache: StateCache = request.app.state.cache
-    pusher: Pusher = request.app.state.pusher
-    return {
-        "board": board.model_dump(),
-        "indicators": [
-            {"key": i.key, "display_name": i.display_name, "kind": i.kind, "sort_order": i.sort_order}
-            for i in cache.indicators
-        ],
-        "device": {"width": pusher.width, "height": pusher.height},
-    }
-
-
-@app.put("/api/display/config")
-async def put_display_config(board: BoardConfig, request: Request):
-    cache: StateCache = request.app.state.cache
-    merged = build_board(board.model_dump_json(), cache.indicators)
-    await request.app.state.db.set_config(CONFIG_KEY, merged.model_dump_json())
-    request.app.state.board = merged
-    request.app.state.pusher.board = merged
-    request.app.state.pusher.mark_dirty()
-    return {"status": "success", "board": merged.model_dump()}
-
-
-@app.post("/api/display/push")
-async def force_push(request: Request):
-    request.app.state.pusher.mark_dirty()
-    return {"status": "queued"}
-
-
-@app.get("/api/display/preview")
-async def preview(request: Request):
-    cache: StateCache = request.app.state.cache
-    board: BoardConfig = request.app.state.board
-    pusher: Pusher = request.app.state.pusher
-    cache.rollover_if_needed()
-    online = cache.is_online(board.online_window_seconds)
-    areas = render_areas(
-        cache.indicators, cache.values, board, cache.now(), online,
-        pusher.width, pusher.height,
-    )
-    return {
-        "areas": areas,
-        "text": render_text(cache.indicators, cache.values),
-        "online": online,
-    }
-
-
-@app.get("/api/tablo/status")
-async def tablo_status(request: Request):
-    tablo: TabloClient = request.app.state.tablo
-    pusher: Pusher = request.app.state.pusher
-    # статус из кэша SSE, без запросов к шлюзу (они сбивают связь)
-    return {
-        "url": settings.tablo_url,
-        "reachable": tablo.sse_alive(),
-        "connected": tablo.connected,
-        "device": tablo.device,
-        "last_push": {
-            "ok": pusher.last_ok,
-            "error": pusher.last_error,
-            "at": pusher.last_push_at.isoformat(timespec="seconds")
-            if pusher.last_push_at
-            else None,
-        },
-    }
-
-
-@app.post("/api/tablo/reconnect")
-async def tablo_reconnect(request: Request):
-    tablo: TabloClient = request.app.state.tablo
-    connected = await tablo.reconnect()
-    request.app.state.pusher.mark_dirty()
-    return {"connected": connected, "device": tablo.device}
 
 
 @app.get("/health")
