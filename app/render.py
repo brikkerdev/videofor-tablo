@@ -16,8 +16,9 @@ def _with_brightness(color: str, brightness: int) -> str:
         return color
     m = re.match(r'^0x[0-9a-fA-F]{2}([0-9a-fA-F]{6})$', color or '', re.IGNORECASE)
     return f'0x{brightness:02x}{m.group(1)}' if m else color
-CHAR_W_RATIO = 0.60  # average Cyrillic char width in LED fonts (empirical)
+CHAR_W_RATIO = 0.75  # char width estimate for fontsize reduction loop
 TEXT_PAD = 4
+LABEL_RATIO = 0.72   # fixed fraction of column width for label zone
 
 
 def render_text(indicators: list[Indicator], values: dict[str, int]) -> str:
@@ -136,38 +137,27 @@ def _gradient_color(value: int, threshold_val: int, op: str, eff_brightness: int
 
 def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h, base_brightness: int = 255) -> list[dict]:
     th = ln.threshold
-    alert = _alert(th, val)
     label = f"{ind.display_name}:"
     value = str(val)
 
-    lw = _text_w(label, fs)
-    vw = _text_w(value, fs)
-    gap = max(4, int(fs * 0.3))
-    if lw + gap + vw > col_w:
-        vw = min(vw, col_w)
-        lw = max(0, col_w - gap - vw)
-    total = lw + gap + vw
-    if board.align == "center":
-        bx = slot_x + (col_w - total) // 2
-    elif board.align == "right":
-        bx = slot_x + col_w - total
-    else:
-        bx = slot_x
-    bx = min(max(slot_x, bx), slot_x + col_w - total)
+    # Fixed split: label takes LABEL_RATIO of column, value gets the rest.
+    # Predictable layout regardless of text length or font metrics.
+    lw = int(col_w * LABEL_RATIO)
+    vw = col_w - lw
 
     eff = _effective_brightness(base_brightness, ln.brightness)
     if ln.smooth and th is not None:
         label_color = value_color = _gradient_color(val, th.value, th.op, eff)
     else:
         label_color = value_color = _with_brightness(ln.color, eff)
-        if alert and th is not None:
+        if _alert(th, val) and th is not None:
             value_color = _with_brightness(th.color, eff)
             if th.target == "line":
                 label_color = value_color
 
     return [
-        _area(label, bx, y, lw, line_h, board.fontname, fs, label_color, board.stunt),
-        _area(value, bx + lw + gap, y, vw, line_h, board.fontname, fs, value_color, board.stunt),
+        _area(label, slot_x,        y, lw, line_h, board.fontname, fs, label_color, board.stunt),
+        _area(value, slot_x + lw,   y, vw, line_h, board.fontname, fs, value_color, board.stunt),
     ]
 
 
@@ -211,11 +201,12 @@ def render_areas(
         line_h = region_h // rows
         col_w = width // cols
         fs = _fit_font(board.fontsize, line_h)
-        longest = max(
-            (f"{ind.display_name}: {values.get(ind.key, 0)}" for ind in visible),
+        label_zone_w = int(col_w * LABEL_RATIO)
+        longest_label = max(
+            (f"{ind.display_name}:" for ind in visible),
             key=len, default="",
         )
-        while fs > MIN_FONT and _text_w(longest, fs) > col_w:
+        while fs > MIN_FONT and _text_w(longest_label, fs) > label_zone_w:
             fs -= 1
         for i, ind in enumerate(visible):
             r, c = divmod(i, cols)
