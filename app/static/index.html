@@ -269,6 +269,15 @@ select.form-input { min-width:120px }
       <!-- header -->
       <div class="row justify-between items-center full-width q-mb-md">
         <span class="text-h5 text-bold">Информационные табло</span>
+        <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                style="border:1px solid #c10015;color:#c10015;background:transparent"
+                :disabled="clearing" @click="clearBoard" type="button">
+          <span class="q-focus-helper" tabindex="-1"></span>
+          <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+            <i class="q-icon notranslate material-icons" :class="{ spin: clearing }" style="font-size:18px">{{ clearing ? 'sync' : 'close' }}</i>
+            {{ clearing ? 'Очистка...' : 'Очистить экран' }}
+          </span>
+        </button>
         <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
                 :disabled="pushing" @click="pushNow" type="button">
           <span class="q-focus-helper" tabindex="-1"></span>
@@ -613,6 +622,7 @@ createApp({
     const status    = ref(null);   // /api/tablo/status
     const saving    = ref(false);
     const pushing   = ref(false);
+    const clearing  = ref(false);
     const cvs       = ref(null);   // canvas ref
 
     /* ── computed: status card ── */
@@ -716,6 +726,16 @@ createApp({
     const saveAndPush = async () => {
       await save();
       await pushNow();
+    };
+
+    const clearBoard = async () => {
+      clearing.value = true;
+      try {
+        const r = await fetch('/api/display/clear', { method: 'POST' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        toast('ok', 'Экран очищен');
+      } catch (e) { toast('err', 'Ошибка очистки: ' + e.message); }
+      finally { clearing.value = false; }
     };
 
     const reconnect = async () => {
@@ -837,11 +857,11 @@ createApp({
       mini, devOpen, repOpen,
       topNav, devNav, repNav, bottomNav,
       tab, cfg, stateData, status,
-      saving, pushing, cvs,
+      saving, pushing, clearing, cvs,
       connDot, connLabel, statusDetail, lastPushLine, deviceLabel,
       linesWithMeta,
       loadConfig, loadState, loadStatus, loadPreview,
-      save, pushNow, saveAndPush, reconnect,
+      save, pushNow, saveAndPush, clearBoard, reconnect,
       setThreshold,
       toasts,
     };

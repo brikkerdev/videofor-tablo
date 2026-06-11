@@ -168,6 +168,98 @@ async def get_state(request: Request):
     return cache.snapshot()
 
 
+@app.get("/api/display/config")
+async def get_display_config(request: Request):
+    board: BoardConfig = request.app.state.board
+    cache: StateCache = request.app.state.cache
+    tablo: TabloClient = request.app.state.tablo
+    device = tablo.device or {}
+    return {
+        "board": board.model_dump(),
+        "indicators": [
+            {"key": ind.key, "display_name": ind.display_name}
+            for ind in cache.indicators
+        ],
+        "device": {
+            "width": device.get("width", BOARD_W),
+            "height": device.get("height", BOARD_H),
+        },
+    }
+
+
+@app.put("/api/display/config")
+async def put_display_config(body: BoardConfig, request: Request):
+    async with request.app.state.lock:
+        request.app.state.board = body
+        request.app.state.pusher.board = body
+        await request.app.state.db.set_config(CONFIG_KEY, body.model_dump_json())
+    request.app.state.pusher.mark_dirty()
+    return {"board": body.model_dump()}
+
+
+@app.get("/api/display/preview")
+async def get_display_preview(request: Request):
+    cache: StateCache = request.app.state.cache
+    board: BoardConfig = request.app.state.board
+    tablo: TabloClient = request.app.state.tablo
+    device = tablo.device or {}
+    width = device.get("width", BOARD_W)
+    height = device.get("height", BOARD_H)
+    cache.rollover_if_needed()
+    online = cache.is_online(board.online_window_seconds)
+    areas = render_areas(cache.indicators, cache.values, board, cache.now(), online, width, height)
+    return {"areas": areas}
+
+
+@app.post("/api/display/push")
+async def push_display(request: Request):
+    request.app.state.pusher.mark_dirty()
+    return {"status": "ok"}
+
+
+@app.post("/api/display/clear")
+async def clear_display(request: Request):
+    tablo: TabloClient = request.app.state.tablo
+    try:
+        await tablo.push_areas([])
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    return {"status": "ok"}
+
+
+@app.get("/api/tablo/status")
+async def get_tablo_status(request: Request):
+    tablo: TabloClient = request.app.state.tablo
+    pusher: Pusher = request.app.state.pusher
+    reachable = tablo.base_url != ""
+    device = tablo.device or {}
+    last_push = None
+    if pusher.last_push_at is not None:
+        last_push = {
+            "at": pusher.last_push_at.strftime("%H:%M:%S"),
+            "ok": pusher.last_ok,
+            "error": pusher.last_error,
+        }
+    return {
+        "reachable": reachable,
+        "connected": tablo.connected,
+        "url": tablo.base_url,
+        "device": {
+            "width": device.get("width", BOARD_W),
+            "height": device.get("height", BOARD_H),
+            "brightness": device.get("brightness", "—"),
+        },
+        "last_push": last_push,
+    }
+
+
+@app.post("/api/tablo/reconnect")
+async def reconnect_tablo(request: Request):
+    tablo: TabloClient = request.app.state.tablo
+    asyncio.create_task(tablo.reconnect())
+    return {"status": "ok"}
+
+
 @app.get("/health")
 async def health(request: Request):
     await request.app.state.db.ping()
