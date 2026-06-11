@@ -1,331 +1,852 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html dir="ltr" lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Табло — настройка вывода</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="user-scalable=no,initial-scale=1,maximum-scale=1,minimum-scale=1,width=device-width">
+<title>Информационные табло — Видеофор</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/quasar@2.14.1/dist/quasar.prod.css" rel="stylesheet">
+<style>
+:root {
+  --q-primary:  #1976d2;
+  --q-secondary:#26a69a;
+  --q-positive: #21ba45;
+  --q-negative: #c10015;
+  --q-dark:     #1d1d1d;
+}
+
+/* ── Tailwind-prefix utilities ── */
+.tw-h-screen        { height:100vh }
+.tw-flex            { display:flex !important }
+.tw-flex-col        { flex-direction:column !important }
+.tw-overflow-hidden { overflow:hidden !important }
+.tw-font-medium     { font-weight:500 }
+.tw-gap-1           { gap:.25rem }
+.tw-gap-2           { gap:.5rem }
+.tw-gap-4           { gap:1rem }
+.tw-justify-end     { justify-content:flex-end !important }
+.tw-ml-auto         { margin-left:auto !important }
+.tw-h-14            { height:3.5rem }
+.tw-mt-auto         { margin-top:auto !important }
+
+* { box-sizing:border-box }
+body { margin:0; font-family:Roboto,sans-serif; overflow:hidden }
+
+/* ── Drawer ── */
+.q-drawer {
+  top:0; bottom:0; background:#fff;
+  display:flex; flex-direction:column;
+  border-right:1px solid rgba(0,0,0,.12);
+  transition:width .25s;
+  position:fixed; left:0; z-index:100;
+}
+.q-drawer.mini { width:56px !important }
+.q-drawer.mini .hide-collapsed,
+.q-drawer.mini .q-item__section--main,
+.q-drawer.mini .q-item__label,
+.q-drawer.mini .q-expansion-item__content,
+.q-drawer.mini .q-expansion-item__toggle-icon { display:none !important }
+.q-drawer__content { height:100%; overflow-y:auto; overflow-x:hidden }
+
+/* ── Page container ── */
+.q-page-container { min-height:100vh; transition:padding-left .25s; overflow-y:auto; height:100vh }
+.q-page           { min-height:100vh }
+.q-layout-padding { padding:16px }
+
+/* ── Nav ── */
+.rotate-180 .q-icon { transform:rotate(180deg) }
+.nav-active, .q-router-link--active {
+  background:var(--q-primary) !important; color:#fff !important;
+}
+.nav-active .q-icon { color:#fff !important }
+
+/* ── Tabs (manual) ── */
+.my-tabs { border-bottom:2px solid #e0e0e0; display:flex; gap:0; margin-bottom:16px }
+.my-tab {
+  padding:10px 20px; cursor:pointer; font-size:14px; font-weight:500;
+  color:#757575; border-bottom:2px solid transparent; margin-bottom:-2px;
+  text-transform:uppercase; letter-spacing:.05em; transition:color .2s;
+}
+.my-tab:hover { color:var(--q-primary) }
+.my-tab.active { color:var(--q-primary); border-bottom-color:var(--q-primary) }
+
+/* ── Status dot ── */
+.dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px }
+.dot-ok   { background:#21ba45 }
+.dot-err  { background:#c10015 }
+.dot-warn { background:#f2c037 }
+.dot-grey { background:#9e9e9e }
+
+/* ── Canvas wrapper ── */
+.canvas-wrap {
+  background:#0d0d0d; border:4px solid #1a1a1a;
+  border-radius:6px; overflow:hidden;
+  display:block; line-height:0;
+  position:relative;
+  box-shadow:inset 0 0 30px rgba(0,0,0,.8), 0 4px 20px rgba(0,0,0,.5);
+}
+.canvas-wrap canvas {
+  display:block;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  width:100%; height:auto;
+}
+
+/* ── Form elements ── */
+.form-row { display:flex; align-items:center; gap:12px; padding:8px 0; flex-wrap:wrap }
+.form-label { font-size:13px; color:#424242; min-width:160px; flex-shrink:0 }
+.form-input {
+  border:1px solid #bdbdbd; border-radius:4px;
+  padding:6px 10px; font-size:13px; font-family:Roboto,sans-serif;
+  outline:none; transition:border-color .2s; background:#fff;
+}
+.form-input:focus { border-color:var(--q-primary) }
+.form-input[type=number] { width:5.5em }
+.form-input[type=checkbox] { width:18px; height:18px; cursor:pointer; accent-color:var(--q-primary) }
+select.form-input { min-width:120px }
+
+/* ── Lines table ── */
+.lines-table { width:100%; border-collapse:collapse; font-size:13px }
+.lines-table th {
+  text-align:left; padding:8px 10px; border-bottom:2px solid #e0e0e0;
+  font-size:11px; font-weight:500; color:#9e9e9e; text-transform:uppercase; letter-spacing:.6px;
+}
+.lines-table td { padding:6px 10px; border-bottom:1px solid #f5f5f5; vertical-align:middle }
+.lines-table tr:last-child td { border-bottom:none }
+
+/* ── Spinner ── */
+@keyframes spin { to { transform:rotate(360deg) } }
+.spin { display:inline-block; animation:spin 1s linear infinite }
+
+/* ── Toast ── */
+.toast-area { position:fixed; bottom:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; align-items:flex-end }
+.toast {
+  background:#323232; color:#fff; border-radius:4px; padding:10px 16px;
+  font-size:14px; box-shadow:0 3px 10px rgba(0,0,0,.35);
+  display:flex; align-items:center; gap:8px; max-width:340px;
+  animation:toastIn .2s ease;
+}
+.toast.ok  { background:#388e3c }
+.toast.err { background:#c62828 }
+@keyframes toastIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+</style>
 </head>
-<body>
-  <h1>Настройка вывода на табло</h1>
-  <p id="status"></p>
 
-  <fieldset>
-    <legend>Подключение к табло</legend>
-    <p>Статус: <strong id="tablo-state">проверка…</strong></p>
-    <p><small id="tablo-detail"></small></p>
-    <button id="btn-reconnect">Переподключить</button>
-    <button id="btn-status">Обновить статус</button>
-  </fieldset>
+<body class="overflow-hidden desktop no-touch body--light">
+<div id="q-app" class="tw-h-screen tw-flex">
 
-  <!-- Шрифты табло (из docs/tablo-api.md, fontlist шлюза) -->
-  <datalist id="fonts">
-    <option value="SimHei"></option>
-    <option value="Times New Roman"></option>
-    <option value="Verdana"></option>
-    <option value="Tahoma"></option>
-    <option value="NSimSun"></option>
-    <option value="Arial"></option>
-    <option value="SimSun"></option>
-    <option value="KaiTi"></option>
-    <option value="DigifaceWide"></option>
-    <option value="Georgia"></option>
-    <option value="Segoe UI"></option>
-  </datalist>
-  <datalist id="colors">
-    <option value="0xffffffff">Белый</option>
-    <option value="0xffff0000">Красный</option>
-    <option value="0xff00ff00">Зелёный</option>
-    <option value="0xff0000ff">Синий</option>
-    <option value="0xffffff00">Жёлтый</option>
-    <option value="0xff00ffff">Голубой</option>
-  </datalist>
+  <!-- ═══════════ SIDEBAR ═══════════ -->
+  <aside class="q-drawer q-drawer--left q-drawer--bordered q-drawer--standard"
+         :class="{ mini }" :style="{ width: mini ? '56px' : '300px' }">
+    <div class="q-drawer__content fit scroll tw-font-medium">
+      <div class="q-list full-height tw-flex tw-flex-col tw-overflow-hidden">
 
-  <fieldset>
-    <legend>Верхняя панель</legend>
-    <label><input type="checkbox" id="tp_enabled" /> Показывать верхнюю панель</label><br />
-    <label><input type="checkbox" id="tp_clock" /> Дата и время</label>
-    <input id="tp_dtfmt" size="14" title="формат strftime" /><br />
-    <label><input type="checkbox" id="tp_online" /> Индикатор онлайн</label>
-    онлайн: <input id="tp_on" size="4" /> офлайн: <input id="tp_off" size="4" /><br />
-    <label>Текст: <input id="tp_text" size="20" /></label><br />
-    <label>Выравнивание:
-      <select id="tp_align">
-        <option value="left">слева</option>
-        <option value="center">по центру</option>
-        <option value="right">справа</option>
-      </select>
-    </label>
-    <label>Шрифт: <input id="tp_font" list="fonts" /></label>
-    <label>Кегль: <input type="number" id="tp_size" min="6" max="99" style="width:5em" /></label>
-    <label>Высота: <input type="number" id="tp_height" min="8" max="48" style="width:5em" /></label>
-    <label>Цвет: <input id="tp_color" list="colors" size="12" /></label>
-    <label>Анимация: <input type="number" id="tp_stunt" min="0" max="100" style="width:5em" /></label>
-  </fieldset>
+        <!-- logo row -->
+        <div class="row full-width justify-around tw-gap-4 items-center tw-h-14">
+          <div class="q-img q-img--menu hide-collapsed" style="width:120px;visibility:hidden">
+            <div style="padding-bottom:31.5%"></div>
+          </div>
+          <button class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--round q-btn--actionable q-focusable q-hoverable"
+                  :class="{ 'rotate-180': !mini }" @click="mini=!mini" type="button">
+            <span class="q-focus-helper"></span>
+            <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row">
+              <i class="q-icon notranslate material-icons">double_arrow</i>
+            </span>
+          </button>
+        </div>
 
-  <fieldset>
-    <legend>Общие параметры строк</legend>
-    <label>Выравнивание:
-      <select id="g_align">
-        <option value="left">слева</option>
-        <option value="center">по центру</option>
-        <option value="right">справа</option>
-      </select>
-    </label>
-    <label>Столбцы:
-      <select id="g_columns">
-        <option value="1">1</option>
-        <option value="2">2</option>
-      </select>
-    </label>
-    <label>Шрифт: <input id="g_font" list="fonts" /></label>
-    <label>Кегль: <input type="number" id="g_size" min="6" max="99" style="width:5em" /></label>
-    <label>Анимация: <input type="number" id="g_stunt" min="0" max="100" style="width:5em" /></label>
-    <label>Окно «онлайн», сек: <input type="number" id="g_window" min="10" style="width:6em" /></label>
-  </fieldset>
+        <div class="tw-overflow-x-auto">
+          <a v-for="item in topNav" :key="item.r"
+             class="q-item q-item-type row no-wrap q-item--clickable q-link cursor-pointer q-focusable q-hoverable"
+             :class="{ 'nav-active': false }" :href="item.href">
+            <div class="q-focus-helper" tabindex="-1"></div>
+            <div class="q-item__section column q-item__section--side justify-center q-item__section--avatar">
+              <i class="q-icon notranslate material-icons">{{ item.icon }}</i>
+            </div>
+            <div class="q-item__section column q-item__section--main justify-center">{{ item.label }}</div>
+          </a>
 
-  <fieldset>
-    <legend>Показатели (что выводить)</legend>
-    <table id="lines" border="1" cellpadding="3">
-      <thead><tr>
-        <th>Показывать</th><th>Показатель</th><th>Ключ</th><th>Цвет</th>
-        <th>Порог</th><th>Условие</th><th>Цвет порога</th><th>Красить</th>
-      </tr></thead>
-      <tbody></tbody>
-    </table>
-    <small>Порог: пусто — выключен. «Красить»: вся строка или только число.</small>
-  </fieldset>
+          <hr class="q-separator q-separator--horizontal q-separator--horizontal-inset" style="margin:8px 0">
 
-  <p>
-    <button id="btn-save">Сохранить</button>
-    <button id="btn-push">Применить на табло</button>
-    <button id="btn-preview">Обновить превью</button>
-  </p>
+          <!-- Устройства -->
+          <div class="q-expansion-item q-item-type q-expansion-item--standard"
+               :class="devOpen ? 'q-expansion-item--expanded' : 'q-expansion-item--collapsed'">
+            <div class="q-expansion-item__container relative-position">
+              <div class="q-item q-item-type row no-wrap q-item--clickable q-link cursor-pointer q-focusable q-hoverable"
+                   role="button" @click="devOpen=!devOpen">
+                <div class="q-focus-helper" tabindex="-1"></div>
+                <div class="q-item__section column q-item__section--side justify-center q-item__section--avatar q-focusable relative-position cursor-pointer">
+                  <i class="q-icon notranslate material-icons q-expansion-item__toggle-icon"
+                     :class="{ 'q-expansion-item__toggle-icon--rotated': devOpen }">keyboard_arrow_down</i>
+                </div>
+                <div class="q-item__section column q-item__section--main justify-center">
+                  <div class="q-item__label">Устройства</div>
+                </div>
+              </div>
+              <div class="q-expansion-item__content" v-show="devOpen">
+                <a v-for="item in devNav" :key="item.r"
+                   class="q-item q-item-type row no-wrap q-item--clickable q-link cursor-pointer q-focusable q-hoverable q-ml-lg"
+                   :class="{ 'nav-active q-router-link--active': item.active }" :href="item.href">
+                  <div class="q-focus-helper" tabindex="-1"></div>
+                  <div class="q-item__section column q-item__section--side justify-center q-item__section--avatar">
+                    <i class="q-icon notranslate material-icons">{{ item.icon }}</i>
+                  </div>
+                  <div class="q-item__section column q-item__section--main justify-center">{{ item.label }}</div>
+                </a>
+              </div>
+            </div>
+          </div>
 
-  <fieldset>
-    <legend>Превью</legend>
-    <p>Онлайн: <span id="pv-online">—</span></p>
-    <canvas id="pv-canvas" width="512" height="192" style="border:1px solid #000;background:#000"></canvas>
-    <pre id="pv-text"></pre>
-  </fieldset>
+          <!-- Отчёты -->
+          <div class="q-expansion-item q-item-type q-expansion-item--standard"
+               :class="repOpen ? 'q-expansion-item--expanded' : 'q-expansion-item--collapsed'">
+            <div class="q-expansion-item__container relative-position">
+              <div class="q-item q-item-type row no-wrap q-item--clickable q-link cursor-pointer q-focusable q-hoverable"
+                   role="button" @click="repOpen=!repOpen">
+                <div class="q-focus-helper" tabindex="-1"></div>
+                <div class="q-item__section column q-item__section--side justify-center q-item__section--avatar q-focusable relative-position cursor-pointer">
+                  <i class="q-icon notranslate material-icons q-expansion-item__toggle-icon"
+                     :class="{ 'q-expansion-item__toggle-icon--rotated': repOpen }">keyboard_arrow_down</i>
+                </div>
+                <div class="q-item__section column q-item__section--main justify-center">
+                  <div class="q-item__label">Отчеты</div>
+                </div>
+              </div>
+              <div class="q-expansion-item__content" v-show="repOpen">
+                <a v-for="item in repNav" :key="item.r"
+                   class="q-item q-item-type row no-wrap q-item--clickable q-link cursor-pointer q-focusable q-hoverable q-ml-lg"
+                   :href="item.href">
+                  <div class="q-focus-helper" tabindex="-1"></div>
+                  <div class="q-item__section column q-item__section--side justify-center q-item__section--avatar">
+                    <i class="q-icon notranslate material-icons">{{ item.icon }}</i>
+                  </div>
+                  <div class="q-item__section column q-item__section--main justify-center">{{ item.label }}</div>
+                </a>
+              </div>
+            </div>
+          </div>
 
-  <script>
-    const $ = (id) => document.getElementById(id);
-    let CFG = null; // {board, indicators, device}
+          <a v-for="item in bottomNav" :key="item.r"
+             class="q-item q-item-type row no-wrap q-item--clickable q-link cursor-pointer q-focusable q-hoverable"
+             :href="item.href">
+            <div class="q-focus-helper" tabindex="-1"></div>
+            <div class="q-item__section column q-item__section--side justify-center q-item__section--avatar">
+              <i class="q-icon notranslate material-icons">{{ item.icon }}</i>
+            </div>
+            <div class="q-item__section column q-item__section--main justify-center">{{ item.label }}</div>
+          </a>
+        </div>
 
-    function setStatus(msg) { $("status").textContent = msg; }
+        <!-- user footer -->
+        <div class="tw-mt-auto">
+          <hr class="q-separator q-separator--horizontal q-separator--horizontal-inset">
+          <div class="row items-center justify-between q-py-sm tw-gap-2 q-px-lg">
+            <div class="row no-wrap items-center tw-gap-4 hide-collapsed" style="overflow-wrap:break-word">
+              <div class="column">
+                <span class="text-bold">Администратор</span>
+              </div>
+            </div>
+            <div class="tw-flex tw-gap-1 tw-justify-end tw-ml-auto">
+              <button class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--round q-btn--actionable q-focusable q-hoverable" type="button">
+                <span class="q-focus-helper"></span>
+                <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row">
+                  <i class="q-icon notranslate material-icons">exit_to_app</i>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
 
-    async function loadConfig() {
-      const r = await fetch("/api/display/config");
-      CFG = await r.json();
-      fillForm();
-      await loadPreview();
-    }
+      </div>
+    </div>
+  </aside>
 
-    function fillForm() {
-      const tp = CFG.board.top_panel;
-      $("tp_enabled").checked = tp.enabled;
-      $("tp_clock").checked = tp.show_clock;
-      $("tp_dtfmt").value = tp.datetime_format;
-      $("tp_online").checked = tp.show_online;
-      $("tp_on").value = tp.online_text;
-      $("tp_off").value = tp.offline_text;
-      $("tp_text").value = tp.text;
-      $("tp_font").value = tp.fontname;
-      $("tp_size").value = tp.fontsize;
-      $("tp_height").value = tp.height;
-      $("tp_color").value = tp.color;
-      $("tp_stunt").value = tp.stunt;
-      $("tp_align").value = tp.align || "left";
+  <!-- ═══════════ MAIN ═══════════ -->
+  <div class="q-page-container" :style="{ paddingLeft: mini ? '56px' : '300px' }" style="flex:1">
+    <main class="q-page q-layout-padding column">
 
-      $("g_align").value = CFG.board.align || "left";
-      $("g_columns").value = String(CFG.board.columns || 1);
-      $("g_font").value = CFG.board.fontname;
-      $("g_size").value = CFG.board.fontsize;
-      $("g_stunt").value = CFG.board.stunt;
-      $("g_window").value = CFG.board.online_window_seconds;
+      <!-- header -->
+      <div class="row justify-between items-center full-width q-mb-md">
+        <span class="text-h5 text-bold">Информационные табло</span>
+        <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                :disabled="pushing" @click="pushNow" type="button">
+          <span class="q-focus-helper" tabindex="-1"></span>
+          <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+            <i class="q-icon notranslate material-icons" :class="{ spin: pushing }" style="font-size:18px">{{ pushing ? 'sync' : 'send' }}</i>
+            {{ pushing ? 'Отправка...' : 'Отправить на табло' }}
+          </span>
+        </button>
+      </div>
 
+      <!-- connection status card -->
+      <div class="q-card q-mb-md" style="border-radius:4px">
+        <div class="q-card__section q-card__section--vert row items-center" style="gap:20px;flex-wrap:wrap;padding:12px 16px">
+          <div style="flex:1;min-width:220px">
+            <div class="row items-center" style="gap:8px;margin-bottom:4px">
+              <span class="dot" :class="connDot"></span>
+              <span style="font-size:14px;font-weight:500">{{ connLabel }}</span>
+              <span v-if="status" style="font-size:12px;color:#9e9e9e">{{ statusDetail }}</span>
+            </div>
+            <div style="font-size:12px;color:#9e9e9e" v-if="lastPushLine">{{ lastPushLine }}</div>
+          </div>
+          <div class="row" style="gap:8px;flex-shrink:0">
+            <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                    style="border:1px solid var(--q-primary);color:var(--q-primary);background:transparent"
+                    @click="loadStatus" type="button">
+              <span class="q-focus-helper" tabindex="-1"></span>
+              <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:4px">
+                <i class="q-icon notranslate material-icons" style="font-size:16px">refresh</i>
+                Обновить
+              </span>
+            </button>
+            <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                    style="border:1px solid #757575;color:#757575;background:transparent"
+                    @click="reconnect" type="button">
+              <span class="q-focus-helper" tabindex="-1"></span>
+              <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:4px">
+                <i class="q-icon notranslate material-icons" style="font-size:16px">settings_ethernet</i>
+                Переподключить
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- tabs -->
+      <div class="my-tabs">
+        <div class="my-tab" :class="{ active: tab==='overview' }" @click="tab='overview'">Обзор</div>
+        <div class="my-tab" :class="{ active: tab==='settings' }" @click="tab='settings'">Настройка вывода</div>
+      </div>
+
+      <!-- ── TAB: OVERVIEW ── -->
+      <template v-if="tab==='overview'">
+
+        <!-- metrics -->
+        <div class="row q-col-gutter-md q-mb-md" v-if="stateData">
+          <div class="col-12 col-sm-4" v-for="ind in stateData.indicators" :key="ind.key">
+            <div class="q-card" style="border-radius:4px">
+              <div class="q-card__section q-card__section--vert">
+                <div style="font-size:11px;font-weight:500;color:#9e9e9e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">{{ ind.display_name }}</div>
+                <div style="font-size:56px;font-weight:300;color:var(--q-primary);line-height:1;margin-bottom:6px;letter-spacing:-1px">{{ ind.value }}</div>
+                <div style="font-size:12px;color:#bdbdbd">{{ stateData.date }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- canvas preview -->
+        <div class="q-card" style="border-radius:4px">
+          <div class="q-card__section q-card__section--vert">
+            <div class="row items-center justify-between q-mb-md">
+              <div class="row items-center" style="gap:8px;font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px">
+                <i class="q-icon notranslate material-icons" style="font-size:16px;color:var(--q-primary)">preview</i>
+                Предпросмотр табло
+              </div>
+              <div class="row items-center" style="gap:8px">
+                <span style="font-size:12px;color:#9e9e9e">{{ deviceLabel }}</span>
+                <button class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--round q-btn--actionable q-focusable q-hoverable"
+                        @click="loadPreview" title="Обновить превью" type="button" style="width:32px;height:32px">
+                  <span class="q-focus-helper"></span>
+                  <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row">
+                    <i class="q-icon notranslate material-icons" style="font-size:18px">refresh</i>
+                  </span>
+                </button>
+              </div>
+            </div>
+            <div class="canvas-wrap">
+              <canvas ref="cvs" width="1024" height="384"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </template>
+
+      <!-- ── TAB: SETTINGS ── -->
+      <template v-if="tab==='settings' && cfg">
+
+        <!-- Top panel -->
+        <div class="q-card q-mb-md" style="border-radius:4px">
+          <div class="q-card__section q-card__section--vert">
+            <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
+              Верхняя панель
+            </div>
+            <div class="form-row">
+              <label class="form-label"><input type="checkbox" class="form-input" v-model="cfg.board.top_panel.enabled"> Показывать верхнюю панель</label>
+            </div>
+            <div class="form-row">
+              <label class="form-label"><input type="checkbox" class="form-input" v-model="cfg.board.top_panel.show_clock"> Дата и время</label>
+              <input class="form-input" v-model="cfg.board.top_panel.datetime_format" placeholder="формат strftime" style="width:12em">
+            </div>
+            <div class="form-row">
+              <label class="form-label"><input type="checkbox" class="form-input" v-model="cfg.board.top_panel.show_online"> Индикатор онлайн</label>
+              <span style="font-size:13px;color:#757575">онлайн:</span>
+              <input class="form-input" v-model="cfg.board.top_panel.online_text" style="width:5em">
+              <span style="font-size:13px;color:#757575">офлайн:</span>
+              <input class="form-input" v-model="cfg.board.top_panel.offline_text" style="width:5em">
+            </div>
+            <div class="form-row">
+              <span class="form-label">Текст</span>
+              <input class="form-input" v-model="cfg.board.top_panel.text" style="width:18em">
+            </div>
+            <div class="form-row">
+              <span class="form-label">Выравнивание</span>
+              <select class="form-input" v-model="cfg.board.top_panel.align">
+                <option value="left">слева</option>
+                <option value="center">по центру</option>
+                <option value="right">справа</option>
+              </select>
+              <span style="font-size:13px;color:#757575;margin-left:12px">Шрифт</span>
+              <input class="form-input" v-model="cfg.board.top_panel.fontname" list="fonts" style="width:12em">
+              <span style="font-size:13px;color:#757575">Кегль</span>
+              <input type="number" class="form-input" v-model.number="cfg.board.top_panel.fontsize" min="6" max="99">
+              <span style="font-size:13px;color:#757575">Высота</span>
+              <input type="number" class="form-input" v-model.number="cfg.board.top_panel.height" min="8" max="48">
+            </div>
+            <div class="form-row">
+              <span class="form-label">Цвет</span>
+              <input class="form-input" v-model="cfg.board.top_panel.color" list="colors" style="width:13em">
+              <span style="font-size:13px;color:#757575;margin-left:12px">Анимация</span>
+              <input type="number" class="form-input" v-model.number="cfg.board.top_panel.stunt" min="0" max="100">
+            </div>
+          </div>
+        </div>
+
+        <!-- General params -->
+        <div class="q-card q-mb-md" style="border-radius:4px">
+          <div class="q-card__section q-card__section--vert">
+            <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
+              Общие параметры строк
+            </div>
+            <div class="form-row">
+              <span class="form-label">Выравнивание</span>
+              <select class="form-input" v-model="cfg.board.align">
+                <option value="left">слева</option>
+                <option value="center">по центру</option>
+                <option value="right">справа</option>
+              </select>
+              <span style="font-size:13px;color:#757575;margin-left:12px">Столбцы</span>
+              <select class="form-input" v-model.number="cfg.board.columns">
+                <option :value="1">1</option>
+                <option :value="2">2</option>
+              </select>
+              <span style="font-size:13px;color:#757575;margin-left:12px">Окно онлайн, сек</span>
+              <input type="number" class="form-input" v-model.number="cfg.board.online_window_seconds" min="10">
+            </div>
+            <div class="form-row">
+              <span class="form-label">Шрифт</span>
+              <input class="form-input" v-model="cfg.board.fontname" list="fonts" style="width:12em">
+              <span style="font-size:13px;color:#757575;margin-left:12px">Кегль</span>
+              <input type="number" class="form-input" v-model.number="cfg.board.fontsize" min="6" max="99">
+              <span style="font-size:13px;color:#757575;margin-left:12px">Анимация</span>
+              <input type="number" class="form-input" v-model.number="cfg.board.stunt" min="0" max="100">
+            </div>
+          </div>
+        </div>
+
+        <!-- Lines -->
+        <div class="q-card q-mb-md" style="border-radius:4px">
+          <div class="q-card__section q-card__section--vert">
+            <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
+              Показатели
+            </div>
+            <div style="overflow-x:auto">
+              <table class="lines-table">
+                <thead>
+                  <tr>
+                    <th>Показывать</th>
+                    <th>Показатель</th>
+                    <th>Ключ</th>
+                    <th>Цвет</th>
+                    <th>Порог</th>
+                    <th>Условие</th>
+                    <th>Цвет порога</th>
+                    <th>Красить</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(ln, i) in linesWithMeta" :key="ln.key">
+                    <td><input type="checkbox" class="form-input" v-model="cfg.board.lines[i].enabled"></td>
+                    <td style="font-weight:500">{{ ln.display_name }}</td>
+                    <td style="font-family:monospace;font-size:12px;color:#757575">{{ ln.key }}</td>
+                    <td><input class="form-input" v-model="cfg.board.lines[i].color" list="colors" style="width:11em"></td>
+                    <td>
+                      <input type="number" class="form-input"
+                             :value="cfg.board.lines[i].threshold?.value ?? ''"
+                             @input="setThreshold(i,'value',$event.target.value)"
+                             placeholder="—">
+                    </td>
+                    <td>
+                      <select class="form-input"
+                              :value="cfg.board.lines[i].threshold?.op ?? '>='"
+                              @change="setThreshold(i,'op',$event.target.value)">
+                        <option>>=</option><option>></option>
+                        <option><=</option><option><</option>
+                        <option>==</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input class="form-input"
+                             :value="cfg.board.lines[i].threshold?.color ?? '0xffff0000'"
+                             @input="setThreshold(i,'color',$event.target.value)"
+                             list="colors" style="width:11em">
+                    </td>
+                    <td>
+                      <select class="form-input"
+                              :value="cfg.board.lines[i].threshold?.target ?? 'line'"
+                              @change="setThreshold(i,'target',$event.target.value)">
+                        <option value="line">строку</option>
+                        <option value="value">число</option>
+                      </select>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="font-size:12px;color:#9e9e9e;margin-top:8px">
+              Порог: пусто — выключен. «Красить»: вся строка или только число.
+            </div>
+          </div>
+        </div>
+
+        <!-- save row -->
+        <div class="row" style="gap:12px;margin-bottom:24px">
+          <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                  :disabled="saving" @click="save" type="button">
+            <span class="q-focus-helper" tabindex="-1"></span>
+            <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+              <i class="q-icon notranslate material-icons" :class="{ spin: saving }" style="font-size:16px">{{ saving ? 'sync' : 'save' }}</i>
+              {{ saving ? 'Сохранение...' : 'Сохранить' }}
+            </span>
+          </button>
+          <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                  style="border:1px solid var(--q-primary);color:var(--q-primary);background:transparent"
+                  @click="saveAndPush" type="button">
+            <span class="q-focus-helper" tabindex="-1"></span>
+            <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+              <i class="q-icon notranslate material-icons" style="font-size:16px">send</i>
+              Сохранить и применить
+            </span>
+          </button>
+        </div>
+
+      </template>
+
+    </main>
+  </div>
+
+  <!-- ══ Toasts ══ -->
+  <div class="toast-area">
+    <div class="toast" :class="t.cls" v-for="t in toasts" :key="t.id">
+      <i class="q-icon notranslate material-icons" style="font-size:18px">{{ t.icon }}</i>
+      {{ t.msg }}
+    </div>
+  </div>
+
+</div>
+
+<!-- datalists -->
+<datalist id="fonts">
+  <option value="DigifaceWide"></option>
+  <option value="Arial"></option>
+  <option value="Verdana"></option>
+  <option value="Tahoma"></option>
+  <option value="Segoe UI"></option>
+  <option value="Times New Roman"></option>
+  <option value="Georgia"></option>
+  <option value="SimHei"></option>
+</datalist>
+<datalist id="colors">
+  <option value="0xffffffff">Белый</option>
+  <option value="0xffff8c00">Янтарный (LED)</option>
+  <option value="0xffff0000">Красный</option>
+  <option value="0xff00ff00">Зелёный</option>
+  <option value="0xff0000ff">Синий</option>
+  <option value="0xffffff00">Жёлтый</option>
+  <option value="0xff00ffff">Голубой</option>
+</datalist>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.0/dist/vue.global.prod.js"></script>
+<script>
+const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
+
+createApp({
+  setup() {
+    /* ── sidebar ── */
+    const mini   = ref(false);
+    const devOpen = ref(true);
+    const repOpen = ref(false);
+
+    const BASE = window.location.origin;
+
+    const topNav = [
+      { icon:'vertical_split', label:'Панель наблюдения',  href: BASE + '/monitoring' },
+      { icon:'event',          label:'Журнал событий',     href: BASE + '/events' },
+      { icon:'inventory_2',    label:'Архив',              href: BASE + '/archive' },
+      { icon:'display_settings',label:'Конструктор',       href: BASE + '/builder/configs' },
+    ];
+    const devNav = [
+      { icon:'video_call',  label:'Камеры',                      href: BASE + '/cameras' },
+      { icon:'speaker',     label:'Громкоговорители',            href: BASE + '/loudspeakers' },
+      { icon:'devices',     label:'Исполнительные устройства',   href: BASE + '/executive-devices' },
+      { icon:'place',       label:'Локации',                     href: BASE + '/locations' },
+      { icon:'monitor',     label:'Информационные табло',        href: '#', active: true },
+    ];
+    const repNav = [
+      { icon:'terminal',      label:'Журнал действий',    href: BASE + '/activity-log' },
+      { icon:'terminal',      label:'Журнал изменений',   href: BASE + '/changes-log' },
+      { icon:'switch_account',label:'Журнал авторизаций', href: BASE + '/login-attempt' },
+      { icon:'event_note',    label:'Отчет по событиям',  href: BASE + '/events-report' },
+    ];
+    const bottomNav = [
+      { icon:'domain',            label:'Подразделения', href: BASE + '/companies' },
+      { icon:'person',            label:'Пользователи',  href: BASE + '/users' },
+      { icon:'domain_verification',label:'Лицензии',     href: BASE + '/license' },
+      { icon:'lan',               label:'Диагностика',   href: BASE + '/diagnostics' },
+      { icon:'code',              label:'О системе',     href: BASE + '/version' },
+    ];
+
+    /* ── state ── */
+    const tab       = ref('overview');
+    const cfg       = ref(null);   // {board, indicators, device}
+    const stateData = ref(null);   // /api/state
+    const status    = ref(null);   // /api/tablo/status
+    const saving    = ref(false);
+    const pushing   = ref(false);
+    const cvs       = ref(null);   // canvas ref
+
+    /* ── computed: status card ── */
+    const connDot = computed(() => {
+      if (!status.value) return 'dot-grey';
+      if (!status.value.reachable) return 'dot-err';
+      if (!status.value.connected) return 'dot-warn';
+      return 'dot-ok';
+    });
+    const connLabel = computed(() => {
+      if (!status.value) return 'Проверка...';
+      if (!status.value.reachable) return 'Нет связи со шлюзом';
+      if (!status.value.connected) return 'Шлюз доступен, матрица не подключена';
+      const d = status.value.device || {};
+      return `Подключено (${d.width}×${d.height}, яркость ${d.brightness})`;
+    });
+    const statusDetail = computed(() => status.value?.url || '');
+    const lastPushLine = computed(() => {
+      const lp = status.value?.last_push;
+      if (!lp?.at) return '';
+      return lp.ok
+        ? `Последняя доставка: OK в ${lp.at}`
+        : `Последняя доставка: ОШИБКА в ${lp.at} — ${lp.error}`;
+    });
+    const deviceLabel = computed(() => {
+      const d = cfg.value?.device;
+      return d ? `${d.width} × ${d.height} px` : '256 × 96 px';
+    });
+
+    /* ── computed: lines with display_name ── */
+    const linesWithMeta = computed(() => {
+      if (!cfg.value) return [];
       const byKey = {};
-      CFG.board.lines.forEach((l) => (byKey[l.key] = l));
-      const tbody = $("lines").querySelector("tbody");
-      tbody.innerHTML = "";
-      const opOptions = [">=", ">", "<=", "<", "=="]
-        .map((o) => `<option value="${o}">${o}</option>`).join("");
-      CFG.indicators.forEach((ind) => {
-        const ln = byKey[ind.key] || { enabled: true, color: "0xffffffff" };
-        const th = ln.threshold || {};
-        const tr = document.createElement("tr");
-        tr.dataset.key = ind.key;
-        tr.innerHTML =
-          `<td><input type="checkbox" class="ln-en" ${ln.enabled ? "checked" : ""}/></td>` +
-          `<td>${ind.display_name}</td>` +
-          `<td>${ind.key}</td>` +
-          `<td><input class="ln-color" list="colors" size="12" value="${ln.color}"/></td>` +
-          `<td><input type="number" class="ln-th-value" style="width:5em" value="${th.value ?? ""}"/></td>` +
-          `<td><select class="ln-th-op">${opOptions}</select></td>` +
-          `<td><input class="ln-th-color" list="colors" size="12" value="${th.color || "0xffff0000"}"/></td>` +
-          `<td><select class="ln-th-target"><option value="line">строку</option><option value="value">число</option></select></td>`;
-        tbody.appendChild(tr);
-        tr.querySelector(".ln-th-op").value = th.op || ">=";
-        tr.querySelector(".ln-th-target").value = th.target || "line";
-      });
-    }
-
-    function collectBoard() {
-      const lines = [];
-      $("lines").querySelectorAll("tbody tr").forEach((tr) => {
-        const thv = tr.querySelector(".ln-th-value").value.trim();
-        const threshold = thv === "" ? null : {
-          value: Number(thv),
-          op: tr.querySelector(".ln-th-op").value,
-          color: tr.querySelector(".ln-th-color").value.trim(),
-          target: tr.querySelector(".ln-th-target").value,
-        };
-        lines.push({
-          key: tr.dataset.key,
-          enabled: tr.querySelector(".ln-en").checked,
-          color: tr.querySelector(".ln-color").value.trim(),
-          threshold: threshold,
-        });
-      });
-      return {
-        top_panel: {
-          enabled: $("tp_enabled").checked,
-          show_clock: $("tp_clock").checked,
-          show_online: $("tp_online").checked,
-          text: $("tp_text").value,
-          datetime_format: $("tp_dtfmt").value,
-          online_text: $("tp_on").value,
-          offline_text: $("tp_off").value,
-          align: $("tp_align").value,
-          color: $("tp_color").value.trim(),
-          fontname: $("tp_font").value,
-          fontsize: Number($("tp_size").value),
-          height: Number($("tp_height").value),
-          stunt: Number($("tp_stunt").value),
-        },
-        lines: lines,
-        columns: Number($("g_columns").value),
-        align: $("g_align").value,
-        fontname: $("g_font").value,
-        fontsize: Number($("g_size").value),
-        stunt: Number($("g_stunt").value),
-        online_window_seconds: Number($("g_window").value),
-      };
-    }
-
-    async function save() {
-      const body = collectBoard();
-      const r = await fetch("/api/display/config", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (r.ok) {
-        CFG.board = (await r.json()).board;
-        setStatus("Сохранено");
-        await loadPreview();
-      } else {
-        setStatus("Ошибка сохранения: " + r.status);
-      }
-    }
-
-    async function pushNow() {
-      const r = await fetch("/api/display/push", { method: "POST" });
-      setStatus(r.ok ? "Отправлено на табло" : "Ошибка отправки: " + r.status);
-    }
-
-    function argbToCss(s) {
-      // 0xAARRGGBB -> #RRGGBB
-      const m = /^0x[0-9a-fA-F]{2}([0-9a-fA-F]{6})$/.exec(s || "");
-      return m ? "#" + m[1] : "#ffffff";
-    }
-
-    function drawPreview(areas, dev) {
-      const c = $("pv-canvas");
-      const ctx = c.getContext("2d");
-      const sx = c.width / (dev.width || 256);
-      const sy = c.height / (dev.height || 96);
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, c.width, c.height);
-      areas.forEach((a) => {
-        const x = a.x * sx, y = a.y * sy, w = a.w * sx, h = a.h * sy;
-        ctx.strokeStyle = "#444";
-        ctx.strokeRect(x, y, w, h);
-        ctx.fillStyle = argbToCss(a.fontcolor);
-        const fs = Math.max(8, a.fontsize * sy);
-        ctx.font = fs + "px " + (a.fontname || "sans-serif");
-        // матрица центрирует текст в зоне — повторяем в превью
-        ctx.textBaseline = "middle";
-        ctx.textAlign = "center";
-        ctx.fillText(a.msg, x + w / 2, y + h / 2);
-      });
-      ctx.textAlign = "left";
-    }
-
-    async function loadPreview() {
-      const r = await fetch("/api/display/preview");
-      const p = await r.json();
-      $("pv-online").textContent = p.online ? "да" : "нет";
-      $("pv-text").textContent = p.text;
-      // числа приходят строками — приведём для отрисовки
-      const areas = p.areas.map((a) => ({
-        ...a, x: +a.x, y: +a.y, w: +a.w, h: +a.h, fontsize: +a.fontsize,
+      (cfg.value.indicators || []).forEach(ind => { byKey[ind.key] = ind; });
+      return (cfg.value.board.lines || []).map(ln => ({
+        ...ln,
+        display_name: byKey[ln.key]?.display_name || ln.key,
       }));
-      drawPreview(areas, CFG.device);
-    }
+    });
 
-    async function loadTabloStatus() {
-      let s;
+    /* ── API calls ── */
+    const loadConfig = async () => {
       try {
-        const r = await fetch("/api/tablo/status");
-        s = await r.json();
-      } catch (e) {
-        $("tablo-state").textContent = "ошибка запроса статуса";
-        $("tablo-state").style.color = "red";
-        return;
-      }
-      const el = $("tablo-state");
-      if (!s.reachable) {
-        el.textContent = "НЕТ СВЯЗИ со шлюзом";
-        el.style.color = "red";
-      } else if (!s.connected) {
-        el.textContent = "шлюз есть, матрица НЕ подключена";
-        el.style.color = "orange";
+        const r = await fetch('/api/display/config');
+        cfg.value = await r.json();
+      } catch (e) { toast('err', 'Ошибка загрузки конфига: ' + e.message); }
+    };
+
+    const loadState = async () => {
+      try {
+        const r = await fetch('/api/state');
+        stateData.value = await r.json();
+      } catch { /* silent */ }
+    };
+
+    const loadStatus = async () => {
+      try {
+        const r = await fetch('/api/tablo/status');
+        status.value = await r.json();
+      } catch { /* silent */ }
+    };
+
+    const loadPreview = async () => {
+      try {
+        const r = await fetch('/api/display/preview');
+        const p = await r.json();
+        await nextTick();
+        drawCanvas(p);
+      } catch (e) { toast('err', 'Ошибка превью: ' + e.message); }
+    };
+
+    const save = async () => {
+      if (!cfg.value) return;
+      saving.value = true;
+      try {
+        const r = await fetch('/api/display/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg.value.board),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        cfg.value.board = data.board;
+        toast('ok', 'Настройки сохранены');
+        if (tab.value === 'overview') await loadPreview();
+      } catch (e) { toast('err', 'Ошибка сохранения: ' + e.message); }
+      finally { saving.value = false; }
+    };
+
+    const pushNow = async () => {
+      pushing.value = true;
+      try {
+        const r = await fetch('/api/display/push', { method: 'POST' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        toast('ok', 'Отправлено на табло');
+        await loadStatus();
+      } catch (e) { toast('err', 'Ошибка отправки: ' + e.message); }
+      finally { pushing.value = false; }
+    };
+
+    const saveAndPush = async () => {
+      await save();
+      await pushNow();
+    };
+
+    const reconnect = async () => {
+      try {
+        await fetch('/api/tablo/reconnect', { method: 'POST' });
+        await loadStatus();
+        toast('ok', 'Команда переподключения отправлена');
+      } catch (e) { toast('err', 'Ошибка переподключения: ' + e.message); }
+    };
+
+    /* ── Threshold helper ── */
+    const setThreshold = (i, field, val) => {
+      const ln = cfg.value.board.lines[i];
+      if (!ln.threshold) ln.threshold = { value: null, op: '>=', color: '0xffff0000', target: 'line' };
+      if (field === 'value') {
+        ln.threshold.value = val === '' ? null : Number(val);
       } else {
-        const d = s.device || {};
-        el.textContent = `подключено (${d.width}x${d.height}, яркость ${d.brightness})`;
-        el.style.color = "green";
+        ln.threshold[field] = val;
       }
-      const lp = s.last_push || {};
-      let push = "доставка: ещё не было";
-      if (lp.at) {
-        push = lp.ok
-          ? `доставка OK в ${lp.at}`
-          : `доставка ОШИБКА в ${lp.at}: ${lp.error}`;
-      }
-      $("tablo-detail").textContent = `${s.url || "TABLO_URL не задан"} · ${push}`;
+      if (ln.threshold.value === null) ln.threshold = null;
+    };
+
+    /* ── Canvas drawing ── */
+    function argbToCss(s) {
+      const m = /^0x[0-9a-fA-F]{2}([0-9a-fA-F]{6})$/.exec(s || '');
+      return m ? '#' + m[1] : '#ffffff';
     }
 
-    async function reconnect() {
-      setStatus("переподключение…");
-      try {
-        const r = await fetch("/api/tablo/reconnect", { method: "POST" });
-        const j = await r.json();
-        setStatus(j.connected ? "переподключено" : "переподключение не удалось");
-      } catch (e) {
-        setStatus("ошибка переподключения: " + e);
+    function drawCanvas(p) {
+      const c = cvs.value;
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      const dev = cfg.value?.device || {};
+      const bw = dev.width  || 256;
+      const bh = dev.height || 96;
+      const sx = c.width  / bw;
+      const sy = c.height / bh;
+
+      // background: very dark — выключенные LED чуть теплее чёрного
+      ctx.fillStyle = '#0a0800';
+      ctx.fillRect(0, 0, c.width, c.height);
+
+      // рисуем каждую ячейку как слегка видимый "мёртвый пиксель"
+      ctx.fillStyle = 'rgba(60,30,0,0.4)';
+      for (let xi = 0; xi < bw; xi++) {
+        for (let yi = 0; yi < bh; yi++) {
+          ctx.fillRect(Math.round(xi*sx)+1, Math.round(yi*sy)+1, Math.max(1,sx-2), Math.max(1,sy-2));
+        }
       }
-      await loadTabloStatus();
+
+      // areas (text zones from the LED controller layout engine)
+      (p.areas || []).forEach(a => {
+        const x = +a.x * sx, y = +a.y * sy;
+        const w = +a.w * sx, h = +a.h * sy;
+        // zone border (subtle)
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, w, h);
+        // text
+        ctx.fillStyle = argbToCss(a.fontcolor);
+        const fs = Math.max(8, +a.fontsize * sy * 0.9);
+        ctx.font = `bold ${fs}px ${a.fontname || 'Arial'}`;
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        // clip to zone
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        ctx.clip();
+        ctx.fillText(a.msg, x + w / 2, y + h / 2);
+        ctx.restore();
+      });
+
+      // ── pixel grid: simulate LED housing between pixels (airport-board look) ──
+      // Each LED "pixel" = sx×sy canvas pixels. Draw 1px dark gap between cells.
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      for (let xi = 0; xi < bw; xi++) {
+        // right edge of each cell
+        ctx.fillRect(Math.round(xi * sx + sx - 1), 0, 1, c.height);
+      }
+      for (let yi = 0; yi < bh; yi++) {
+        // bottom edge of each cell
+        ctx.fillRect(0, Math.round(yi * sy + sy - 1), c.width, 1);
+      }
     }
 
-    $("btn-save").addEventListener("click", save);
-    $("btn-push").addEventListener("click", pushNow);
-    $("btn-preview").addEventListener("click", loadPreview);
-    $("btn-reconnect").addEventListener("click", reconnect);
-    $("btn-status").addEventListener("click", loadTabloStatus);
-    loadConfig().catch((e) => setStatus("Ошибка загрузки: " + e));
-    loadTabloStatus();
-    setInterval(loadTabloStatus, 10000);
-  </script>
+    /* ── watch tab to draw canvas when switching to overview ── */
+    watch(tab, async (val) => {
+      if (val === 'overview') {
+        await nextTick();
+        await loadPreview();
+      }
+    });
+
+    /* ── toasts ── */
+    const toasts = ref([]);
+    let _tid = 0;
+    const toast = (cls, msg, ms = 3500) => {
+      const id = ++_tid;
+      const icon = cls === 'ok' ? 'check_circle' : 'error';
+      toasts.value.push({ id, cls, icon, msg });
+      setTimeout(() => {
+        const i = toasts.value.findIndex(t => t.id === id);
+        if (i !== -1) toasts.value.splice(i, 1);
+      }, ms);
+    };
+
+    /* ── lifecycle ── */
+    let t1, t2;
+    onMounted(async () => {
+      await Promise.all([loadConfig(), loadState(), loadStatus()]);
+      await loadPreview();
+      t1 = setInterval(loadState,  10_000);
+      t2 = setInterval(loadStatus, 10_000);
+    });
+    onUnmounted(() => { clearInterval(t1); clearInterval(t2); });
+
+    return {
+      mini, devOpen, repOpen,
+      topNav, devNav, repNav, bottomNav,
+      tab, cfg, stateData, status,
+      saving, pushing, cvs,
+      connDot, connLabel, statusDetail, lastPushLine, deviceLabel,
+      linesWithMeta,
+      loadConfig, loadState, loadStatus, loadPreview,
+      save, pushNow, saveAndPush, reconnect,
+      setThreshold,
+      toasts,
+    };
+  },
+}).mount('#q-app');
+</script>
 </body>
 </html>
