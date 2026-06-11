@@ -7,7 +7,6 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles, FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
