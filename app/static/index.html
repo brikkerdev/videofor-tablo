@@ -700,7 +700,7 @@ createApp({
       if (!status.value.reachable) return 'Нет связи со шлюзом';
       if (!status.value.connected) return 'Шлюз доступен, матрица не подключена';
       const d = status.value.device || {};
-      return `Подключено (${d.width}×${d.height}, яркость ${d.brightness})`;
+      return 'Подключено';
     });
     const statusDetail = computed(() => status.value?.url || '');
     const lastPushLine = computed(() => {
