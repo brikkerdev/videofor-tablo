@@ -97,13 +97,21 @@ def _lerp(a: tuple, b: tuple, t: float) -> tuple:
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def _gradient_color(value: int, threshold_val: int, op: str, eff_brightness: int) -> str:
+def _parse_rgb(color: str) -> tuple:
+    m = re.match(r'^0x[0-9a-fA-F]{2}([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$', color or '')
+    if m:
+        return int(m.group(1), 16), int(m.group(2), 16), int(m.group(3), 16)
+    return (255, 255, 255)
+
+
+def _gradient_color(value: int, threshold_val: int, op: str, eff_brightness: int, base_color: str = "0xffffffff") -> str:
     """Percentage-based gradient: value/threshold → color.
 
-    above_is_bad (>=, >): 0%→white, 25%→white, 50%→yellow, 75%→orange, 100%+→red
-    below_is_bad (<=, <): 0%→red,   25%→orange, 50%→yellow, 75%→white,  100%+→white
+    'Good' endpoint uses base_color (the line's own color setting).
+    above_is_bad (>=, >): 0%→good, 25%→good, 50%→yellow, 75%→orange, 100%+→red
+    below_is_bad (<=, <): 0%→red,  25%→orange, 50%→yellow, 75%→good,  100%+→good
     """
-    WHITE  = (255, 255, 255)
+    GOOD   = _parse_rgb(base_color)
     YELLOW = (255, 200,   0)
     ORANGE = (255, 100,   0)
     RED    = (255,   0,   0)
@@ -114,13 +122,10 @@ def _gradient_color(value: int, threshold_val: int, op: str, eff_brightness: int
     above_is_bad = op in (">=", ">")
 
     if above_is_bad:
-        # high value is bad (e.g. violations)
-        kp = [(0.0, WHITE), (0.25, WHITE), (0.5, YELLOW), (0.75, ORANGE), (1.0, RED)]
+        kp = [(0.0, GOOD), (0.25, GOOD), (0.5, YELLOW), (0.75, ORANGE), (1.0, RED)]
     else:
-        # low value is bad (e.g. instructors on track)
-        kp = [(0.0, RED), (0.25, ORANGE), (0.5, YELLOW), (0.75, WHITE), (1.0, WHITE)]
+        kp = [(0.0, RED), (0.25, ORANGE), (0.5, YELLOW), (0.75, GOOD), (1.0, GOOD)]
 
-    # cap at last keypoint (solid color beyond 100%)
     pct = min(pct, kp[-1][0])
 
     r, g, b = kp[-1][1]
@@ -147,7 +152,7 @@ def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h, base_brightne
 
     eff = _effective_brightness(base_brightness, ln.brightness)
     if ln.smooth and th is not None:
-        label_color = value_color = _gradient_color(val, th.value, th.op, eff)
+        label_color = value_color = _gradient_color(val, th.value, th.op, eff, ln.color)
     else:
         label_color = value_color = _with_brightness(ln.color, eff)
         if _alert(th, val) and th is not None:
