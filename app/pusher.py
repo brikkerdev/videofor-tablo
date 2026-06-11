@@ -9,18 +9,11 @@ from .tablo import TabloClient
 
 logger = logging.getLogger("app.pusher")
 
-TICK_SECONDS = 30  # период проверки дня и обновления часов верхней панели
-MIN_PUSH_INTERVAL = 2.0  # не чаще: ESP32 захлёбывается частыми message.json
+TICK_SECONDS = 30
+MIN_PUSH_INTERVAL = 2.0
 
 
 class Pusher:
-    """Фоновая доставка состояния на табло.
-
-    Спит на asyncio.Event, БД не опрашивает. Просыпается по событию,
-    при изменении конфигурации вывода и раз в TICK_SECONDS — чтобы
-    сдвинуть часы верхней панели и проверить смену дня.
-    """
-
     def __init__(
         self,
         tablo: TabloClient,
@@ -39,9 +32,8 @@ class Pusher:
         self.width = width
         self.height = height
         self._dirty = asyncio.Event()
-        self._last_push_t = 0.0  # время последней доставки (loop.time)
-        self.paused: bool = False   # True после clear до следующего push
-        # результат последней доставки для статуса на фронтенде
+        self._last_push_t = 0.0
+        self.paused: bool = False
         self.last_ok: bool | None = None
         self.last_error: str = ""
         self.last_push_at = None
@@ -60,8 +52,7 @@ class Pusher:
             except asyncio.TimeoutError:
                 self.state.rollover_if_needed()
                 if not self._clock_running():
-                    continue  # нет часов и нет событий — ничего не шлём
-            # дебаунс: коалесим всплески событий в один push
+                    continue
             loop = asyncio.get_running_loop()
             wait = MIN_PUSH_INTERVAL - (loop.time() - self._last_push_t)
             if wait > 0:

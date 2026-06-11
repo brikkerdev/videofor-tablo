@@ -6,17 +6,11 @@ import httpx
 
 logger = logging.getLogger("app.tablo")
 
-# ESP32 принимает не больше ~4 областей в одном message.json (больше -> 503).
-# Области адресуются по id и накапливаются между запросами, поэтому шлём
-# пачками по BATCH_SIZE с небольшой паузой.
 BATCH_SIZE = 4
 INTER_BATCH_DELAY = 0.4
 
 
 def _clear_area(area_id: str) -> dict:
-    """Минимальная валидная область с пустым текстом — гасит область area_id.
-    msg обязателен (его отсутствие роняет шлюз), остальные поля заполняем
-    безопасными значениями."""
     return {
         "id": area_id,
         "msg": "",
@@ -32,14 +26,6 @@ def _clear_area(area_id: str) -> dict:
 
 
 class TabloClient:
-    """Клиент ESP32-шлюза табло. Контракт описан в docs/tablo-api.md.
-
-    Шлюз держит связь с матрицей только пока открыт поток GET /sse.json,
-    по нему же проходит логин. Поэтому клиент постоянно удерживает SSE и
-    берёт статус связи из его событий (login/device), а не частыми
-    запросами /connect.json — лишние соединения сбивают связь у ESP32.
-    """
-
     def __init__(
         self,
         base_url: str,
@@ -53,7 +39,6 @@ class TabloClient:
         self.matrix_ip = matrix_ip
         self.matrix_pass = matrix_pass
         self._stream_client = httpx.AsyncClient(timeout=httpx.Timeout(None, connect=5.0))
-        # короткие запросы (connect/message) — по одному за раз, без keep-alive
         self._client = httpx.AsyncClient(
             timeout=timeout,
             limits=httpx.Limits(max_connections=1, max_keepalive_connections=0),
@@ -63,13 +48,11 @@ class TabloClient:
         self._warned_no_url = False
         self._sse_task: asyncio.Task | None = None
         self._stop = False
-        self.device: dict | None = None  # параметры панели из SSE/connect.json
-        self.connected = False  # связь с матрицей по событиям SSE
+        self.device: dict | None = None
+        self.connected = False
 
     def _url(self, path: str) -> str:
         return f"{self.base_url}/{path}"
-
-    # --- удержание SSE (держит матрицу подключённой) --------------------
 
     def start(self) -> None:
         if self.base_url and self._sse_task is None:
@@ -84,7 +67,6 @@ class TabloClient:
         while not self._stop:
             try:
                 async with self._stream_client.stream("GET", url) as resp:
-                    # дать шлюзу зарегистрировать SSE-клиента, затем войти
                     await asyncio.sleep(2)
                     if self.matrix_ip:
                         await self._post_connect(self.matrix_ip, self.matrix_pass)
@@ -95,7 +77,7 @@ class TabloClient:
                 raise
             except Exception as exc:
                 logger.warning("SSE к табло прервался: %s", exc)
-            self.connected = False  # поток закрыт — связь потеряна
+            self.connected = False
             if not self._stop:
                 await asyncio.sleep(3)
 
@@ -106,7 +88,6 @@ class TabloClient:
             return
         if obj.get("login") is False:
             self.connected = False
-        # готовность к выводу подтверждает событие device (приходит после login)
         dev = obj.get("device")
         if isinstance(dev, dict):
             self.device = {**(self.device or {}), **dev}
@@ -126,10 +107,7 @@ class TabloClient:
             self._sse_task = None
         self.connected = False
 
-    # --- подключение и статус ------------------------------------------
-
     async def _post_connect(self, matrix_ip: str, matrix_pass: str) -> None:
-        """POST /connect.json (ответ 204). Связь подтвердится через SSE."""
         try:
             async with self._req_lock:
                 resp = await self._client.post(
@@ -141,8 +119,6 @@ class TabloClient:
             logger.warning("connect.json не удался: %s", exc)
 
     async def get_device(self) -> dict | None:
-        """Явный запрос /connect.json. Использовать редко: лишние запросы
-        к шлюзу сбивают связь. Для статуса берём self.connected/self.device."""
         if not self.base_url:
             return None
         try:
@@ -155,20 +131,15 @@ class TabloClient:
             return None
 
     async def reconnect(self) -> bool:
-        """Переподключить: перезапустить удержание SSE и дождаться логина."""
         await self._stop_sse()
         self.start()
-        for _ in range(16):  # ждём подтверждения связи по SSE (до ~8с)
+        for _ in range(16):
             if self.connected:
                 return True
             await asyncio.sleep(0.5)
         return self.connected
 
-    # --- вывод ----------------------------------------------------------
-
     async def push_areas(self, areas: list[dict]) -> None:
-        """Отправить области на табло, погасив устаревшие. Только при
-        активной связи: иначе шлюз отвечает 503 и это сбивает SSE."""
         if not self.base_url:
             if not self._warned_no_url:
                 logger.warning("TABLO_URL не задан, push пропускается")
@@ -183,9 +154,8 @@ class TabloClient:
             payload.extend(_clear_area(str(i)) for i in range(count, self._last_max + 1))
 
         if not payload:
-            return  # нечего показывать и нечего гасить
+            return
 
-        # шлём пачками по BATCH_SIZE: больше шлюз не принимает (503)
         for j in range(0, len(payload), BATCH_SIZE):
             chunk = payload[j : j + BATCH_SIZE]
             async with self._req_lock:
@@ -196,7 +166,6 @@ class TabloClient:
         self._last_max = count - 1 if count else None
 
     async def set_brightness(self, value: int) -> bool:
-        """POST /brightness.json — set display brightness 0-255."""
         if not self.base_url:
             return False
         try:

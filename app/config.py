@@ -10,11 +10,9 @@ class Settings(BaseSettings):
     app_timezone: str = ""
     api_key: str = ""
 
-    # Базовый адрес ESP32-шлюза табло, например http://192.168.0.64
     tablo_url: str = ""
     tablo_token: str = ""
 
-    # Подключение шлюза к матрице (выполняется один раз при старте, опционально)
     tablo_matrix_ip: str = ""
     tablo_matrix_pass: str = "guest"
 

@@ -26,7 +26,6 @@ CONFIG_KEY = "display_config"
 
 
 def build_board(raw: str | None, indicators) -> BoardConfig:
-    """Конфигурация вывода из БД, дополненная новыми показателями."""
     if raw:
         try:
             board = BoardConfig.model_validate_json(raw)
@@ -62,9 +61,9 @@ async def lifespan(app: FastAPI):
         settings.tablo_matrix_ip,
         settings.tablo_matrix_pass,
     )
-    tablo.start()  # держит SSE открытым, иначе матрица отваливается
+    tablo.start()
     width, height = BOARD_W, BOARD_H
-    for _ in range(16):  # дать SSE подняться и войти (параметры панели придут в SSE)
+    for _ in range(16):
         if tablo.connected:
             break
         await asyncio.sleep(0.5)

@@ -16,14 +16,13 @@ def _with_brightness(color: str, brightness: int) -> str:
         return color
     m = re.match(r'^0x[0-9a-fA-F]{2}([0-9a-fA-F]{6})$', color or '', re.IGNORECASE)
     return f'0x{brightness:02x}{m.group(1)}' if m else color
-CHAR_W_RATIO = 0.75  # char width estimate for fontsize reduction loop
+
+CHAR_W_RATIO = 0.75
 TEXT_PAD = 4
-LABEL_RATIO = 0.72   # fixed fraction of column width for label zone
+LABEL_RATIO = 0.72
 
 
 def render_text(indicators: list[Indicator], values: dict[str, int]) -> str:
-    """Текстовое представление состояния. Используется для отладки и
-    превью, на табло уходит через render_areas."""
     if not indicators:
         return ""
     width = max(len(ind.display_name) for ind in indicators) + 1
@@ -34,7 +33,6 @@ def render_text(indicators: list[Indicator], values: dict[str, int]) -> str:
 
 
 def _fit_font(size: int, area_h: int) -> int:
-    """Не дать кеглю вылезти за высоту области."""
     return max(MIN_FONT, min(size, area_h - 2))
 
 
@@ -43,22 +41,15 @@ def _text_w(msg: str, fontsize: int) -> int:
 
 
 def _align_zone(slot_x: int, slot_w: int, msg: str, fontsize: int, align: str):
-    """Координаты зоны внутри слота под нужное выравнивание.
-
-    Матрица центрирует текст в зоне, поэтому выравнивание задаём
-    геометрией: для left/right сужаем зону под оценочную ширину текста
-    и прижимаем к краю слота. center — зона во весь слот.
-    """
     if align == "center":
         return slot_x, slot_w
     tw = min(slot_w, _text_w(msg, fontsize))
     if align == "right":
         return slot_x + slot_w - tw, tw
-    return slot_x, tw  # left
+    return slot_x, tw
 
 
 def _alert(th, val: int) -> bool:
-    """Сработал ли порог для значения."""
     if th is None:
         return False
     t = th.value
@@ -105,12 +96,6 @@ def _parse_rgb(color: str) -> tuple:
 
 
 def _gradient_color(value: int, threshold_val: int, op: str, eff_brightness: int, base_color: str = "0xffffffff") -> str:
-    """Percentage-based gradient: value/threshold → color.
-
-    'Good' endpoint uses base_color (the line's own color setting).
-    above_is_bad (>=, >): 0%→good, 25%→good, 50%→yellow, 75%→orange, 100%+→red
-    below_is_bad (<=, <): 0%→red,  25%→orange, 50%→yellow, 75%→good,  100%+→good
-    """
     GOOD   = _parse_rgb(base_color)
     YELLOW = (255, 200,   0)
     ORANGE = (255, 100,   0)
@@ -145,8 +130,6 @@ def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h, base_brightne
     label = f"{ind.display_name}:"
     value = str(val)
 
-    # Fixed split: label takes LABEL_RATIO of column, value gets the rest.
-    # Predictable layout regardless of text length or font metrics.
     lw = int(col_w * LABEL_RATIO)
     vw = col_w - lw
 
@@ -175,14 +158,6 @@ def render_areas(
     width: int = BOARD_W,
     height: int = BOARD_H,
 ) -> list[dict]:
-    """Собрать список областей для POST /message.json.
-
-    Раскладка: опциональная верхняя плашка во всю ширину, ниже —
-    включённые показатели в board.columns столбцов. Выравнивание — через
-    геометрию зоны, пороги — сменой цвета строки или числа.
-    id областей назначаются подряд от "0": клиент гасит хвостовые id
-    при уменьшении их числа (см. TabloClient).
-    """
     areas: list[dict] = []
 
     top_h = board.top_panel.height if board.top_panel.enabled else 0
@@ -223,7 +198,6 @@ def render_areas(
                             base_brightness=board.screen_brightness)
             )
 
-    # Идентификаторы подряд, значения строками — как у штатного интерфейса
     out: list[dict] = []
     for idx, a in enumerate(areas):
         out.append({"id": str(idx), **{k: str(v) for k, v in a.items()}})

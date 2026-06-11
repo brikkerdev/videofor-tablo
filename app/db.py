@@ -30,36 +30,31 @@ class Database:
 
     async def ping(self) -> bool:
         async with self.pool.acquire() as conn:
-            await conn.fetchval("SELECT 1")
+            await conn.fetchval("select 1")
         return True
 
     async def load_indicators(self) -> list[Indicator]:
         rows = await self.pool.fetch(
-            "SELECT key, display_name, kind, sort_order FROM indicators "
-            "WHERE enabled ORDER BY sort_order"
+            "select key, display_name, kind, sort_order from indicators "
+            "where enabled order by sort_order"
         )
         return [Indicator(**dict(r)) for r in rows]
 
     async def load_rules(self) -> list[Rule]:
         rows = await self.pool.fetch(
-            "SELECT event_type, checkpoint, indicator_key, op FROM event_rules "
-            "WHERE enabled"
+            "select event_type, checkpoint, indicator_key, op from event_rules "
+            "where enabled"
         )
         return [Rule(**dict(r)) for r in rows]
 
     async def load_state(self, day: date) -> tuple[dict[str, int], dict[str, int]]:
-        """Значения за день и последние значения предыдущих дней.
-
-        Вторые нужны для переноса gauge-показателей после рестарта,
-        если за сегодня по ним ещё не было записей.
-        """
         today_rows = await self.pool.fetch(
-            "SELECT indicator_key, value FROM counter_values WHERE day = $1", day
+            "select indicator_key, value from counter_values where day = $1", day
         )
         prev_rows = await self.pool.fetch(
-            "SELECT DISTINCT ON (indicator_key) indicator_key, value "
-            "FROM counter_values WHERE day < $1 "
-            "ORDER BY indicator_key, day DESC",
+            "select distinct on (indicator_key) indicator_key, value "
+            "from counter_values where day < $1 "
+            "order by indicator_key, day desc",
             day,
         )
         today_values = {r["indicator_key"]: r["value"] for r in today_rows}
@@ -73,9 +68,9 @@ class Database:
         async with self.pool.acquire() as conn:
             async with conn.transaction():
                 await conn.execute(
-                    "INSERT INTO events "
+                    "insert into events "
                     "(event_type, event_time, source, object_type, checkpoint, value, payload) "
-                    "VALUES ($1, $2, $3, $4, $5, $6, $7)",
+                    "values ($1, $2, $3, $4, $5, $6, $7)",
                     event.event_type,
                     event.event_time,
                     event.source,
@@ -86,10 +81,10 @@ class Database:
                 )
                 for key, value in changes.items():
                     await conn.execute(
-                        "INSERT INTO counter_values (day, indicator_key, value) "
-                        "VALUES ($1, $2, $3) "
-                        "ON CONFLICT (day, indicator_key) "
-                        "DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
+                        "insert into counter_values (day, indicator_key, value) "
+                        "values ($1, $2, $3) "
+                        "on conflict (day, indicator_key) "
+                        "do update set value = excluded.value, updated_at = now()",
                         day,
                         key,
                         value,
@@ -97,33 +92,33 @@ class Database:
 
     async def get_config(self, key: str) -> str | None:
         return await self.pool.fetchval(
-            "SELECT value FROM config WHERE key = $1", key
+            "select value from config where key = $1", key
         )
 
     async def set_config(self, key: str, value: str) -> None:
         await self.pool.execute(
-            "INSERT INTO config (key, value) VALUES ($1, $2) "
-            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
+            "insert into config (key, value) values ($1, $2) "
+            "on conflict (key) do update set value = excluded.value, updated_at = now()",
             key,
             value,
         )
 
     async def set_counter_value(self, day: date, key: str, value: int) -> None:
         await self.pool.execute(
-            "INSERT INTO counter_values (day, indicator_key, value) VALUES ($1, $2, $3) "
-            "ON CONFLICT (day, indicator_key) "
-            "DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
+            "insert into counter_values (day, indicator_key, value) values ($1, $2, $3) "
+            "on conflict (day, indicator_key) "
+            "do update set value = excluded.value, updated_at = now()",
             day, key, value,
         )
 
     async def is_dirty(self) -> bool:
         return await self.pool.fetchval(
-            "SELECT coalesce("
-            "  (SELECT max(updated_at) FROM counter_values) > "
-            "  coalesce((SELECT pushed_at FROM push_state WHERE id = 1), "
+            "select coalesce("
+            "  (select max(updated_at) from counter_values) > "
+            "  coalesce((select pushed_at from push_state where id = 1), "
             "           'epoch'::timestamptz), "
             "  FALSE)"
         )
 
     async def set_pushed_at(self) -> None:
-        await self.pool.execute("UPDATE push_state SET pushed_at = now() WHERE id = 1")
+        await self.pool.execute("update push_state set pushed_at = now() where id = 1")

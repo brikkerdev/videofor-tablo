@@ -11,12 +11,6 @@ class Indicator:
 
 
 class StateCache:
-    """Текущее состояние показателей в памяти процесса.
-
-    Источник правды для чтения: GET /api/state и push на табло
-    в БД не ходят. БД получает только записи при событиях.
-    """
-
     def __init__(self, tz):
         self.tz = tz
         self.day: date | None = None
@@ -29,7 +23,6 @@ class StateCache:
         return datetime.now(self.tz)
 
     def is_online(self, window_seconds: int) -> bool:
-        """Считаем источник онлайн, если событие приходило недавно."""
         if not self.last_event_at:
             return False
         return (self.now() - self.last_event_at).total_seconds() <= window_seconds
@@ -56,7 +49,6 @@ class StateCache:
                 self.values[ind.key] = 0
 
     def rollover_if_needed(self) -> bool:
-        """Смена календарного дня: daily в ноль, gauge переносится."""
         today = self.today()
         if self.day == today:
             return False

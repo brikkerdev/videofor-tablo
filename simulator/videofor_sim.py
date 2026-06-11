@@ -1,8 +1,3 @@
-"""Симулятор Видеофора: шлёт случайные события в сервис интеграции.
-
-Временная замена реального Видеофора на период разработки.
-"""
-
 import asyncio
 import logging
 import os
@@ -19,7 +14,6 @@ API_KEY = os.environ.get("API_KEY", "")
 MIN_DELAY = float(os.environ.get("SIM_MIN_DELAY", "2"))
 MAX_DELAY = float(os.environ.get("SIM_MAX_DELAY", "8"))
 
-# (event_type, object_type, checkpoint, вес)
 EVENTS = [
     ("violation", "transport", None, 4),
     ("student_in", "student", None, 3),
