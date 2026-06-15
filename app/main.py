@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -12,7 +13,14 @@ from pydantic import BaseModel, Field
 
 from .config import settings
 from .db import Database
-from .models import BoardConfig, EventIn, LineConfig
+from .models import (
+    BoardConfig,
+    EventIn,
+    IndicatorIn,
+    IndicatorPatch,
+    LineConfig,
+    RuleIn,
+)
 from .pusher import Pusher
 from .render import BOARD_H, BOARD_W, render_areas, render_text
 from .rules import apply_op, match_rules
@@ -39,6 +47,35 @@ def build_board(raw: str | None, indicators) -> BoardConfig:
         if ind.key not in known:
             board.lines.append(LineConfig(key=ind.key))
     return board
+
+
+def slugify(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", (value or "").lower()).strip("_")
+
+
+async def reload_dictionaries(app: FastAPI, prune: bool = False) -> None:
+    """Перечитать справочники из БД в кэш без рестарта (docs §5.1).
+
+    Подхватывает новые/изменённые показатели и правила, до-создаёт строки board
+    для новых показателей. prune=True убирает из board.lines ключи удалённых
+    показателей (конфиг отключённых, но существующих показателей сохраняется).
+    """
+    db: Database = app.state.db
+    cache: StateCache = app.state.cache
+    async with app.state.lock:
+        cache.rollover_if_needed()
+        today = cache.today()
+        today_values, prev_values = await db.load_state(today)
+        cache.load(await db.load_indicators(), today_values, prev_values, today)
+        app.state.rules = await db.load_rules()
+        board = build_board(await db.get_config(CONFIG_KEY), cache.indicators)
+        if prune:
+            keys = await db.load_all_indicator_keys()
+            board.lines = [ln for ln in board.lines if ln.key in keys]
+        app.state.board = board
+        app.state.pusher.board = board
+        await db.set_config(CONFIG_KEY, board.model_dump_json())
+    app.state.pusher.mark_dirty()
 
 
 @asynccontextmanager
@@ -133,6 +170,8 @@ async def receive_event(
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     cache: StateCache = request.app.state.cache
+    # Регистрируем тип события в реестре (даже если правила нет) — для конструктора.
+    await request.app.state.db.record_observed_event(event)
     matched = match_rules(request.app.state.rules, event.event_type, event.checkpoint)
     if not matched:
         raise HTTPException(status_code=400, detail="Invalid event type")
@@ -297,6 +336,150 @@ async def adjust_state(body: AdjustIn, request: Request):
         await request.app.state.db.set_counter_value(cache.day, body.key, new_val)
     request.app.state.pusher.mark_dirty()
     return {"key": body.key, "value": new_val}
+
+
+@app.get("/api/event-catalog")
+async def get_event_catalog(request: Request):
+    db: Database = request.app.state.db
+    board: BoardConfig = request.app.state.board
+    observed = await db.list_observed_events()
+    indicators = await db.load_all_indicators()
+    rules = await db.load_all_rules()
+
+    ind_by_key = {i["key"]: i for i in indicators}
+    obs_by_type = {o["event_type"]: o for o in observed}
+    rules_by_event: dict[str, list[dict]] = {}
+    for r in rules:
+        rules_by_event.setdefault(r["event_type"], []).append(r)
+
+    events = []
+    for et in sorted(set(obs_by_type) | set(rules_by_event)):
+        o = obs_by_type.get(et)
+        mappings = []
+        for r in rules_by_event.get(et, []):
+            ind = ind_by_key.get(r["indicator_key"])
+            mappings.append(
+                {
+                    "indicator_key": r["indicator_key"],
+                    "display_name": ind["display_name"] if ind else r["indicator_key"],
+                    "op": r["op"],
+                    "checkpoint": r["checkpoint"],
+                    "rule_enabled": r["enabled"],
+                    "indicator_enabled": bool(ind and ind["enabled"]),
+                    "line_enabled": board.line(r["indicator_key"]).enabled,
+                }
+            )
+        if not mappings:
+            status = "unhandled"
+        elif any(
+            m["rule_enabled"] and m["indicator_enabled"] and m["line_enabled"]
+            for m in mappings
+        ):
+            status = "displayed"
+        else:
+            status = "configured"
+        events.append(
+            {
+                "event_type": et,
+                "object_type": o["object_type"] if o else None,
+                "checkpoint": o["checkpoint"] if o else None,
+                "count": o["count"] if o else 0,
+                "last_seen": o["last_seen"].isoformat() if o and o["last_seen"] else None,
+                "observed": o is not None,            # есть строка в реестре
+                "received": bool(o and o["count"] > 0),  # событие реально приходило
+                "status": status,
+                "mappings": mappings,
+            }
+        )
+
+    return {
+        "events": events,
+        "indicators": [
+            {
+                "key": i["key"],
+                "display_name": i["display_name"],
+                "kind": i["kind"],
+                "sort_order": i["sort_order"],
+                "enabled": i["enabled"],
+                "line_enabled": board.line(i["key"]).enabled,
+            }
+            for i in indicators
+        ],
+    }
+
+
+@app.post("/api/indicators")
+async def create_indicator(body: IndicatorIn, request: Request):
+    db: Database = request.app.state.db
+    base = body.key or (body.rule.event_type if body.rule else body.display_name)
+    key = slugify(base)
+    if not key:
+        raise HTTPException(status_code=400, detail="Cannot derive indicator key; provide 'key'")
+    if await db.indicator_exists(key):
+        raise HTTPException(status_code=409, detail=f"Indicator '{key}' already exists")
+    sort_order = (
+        body.sort_order
+        if body.sort_order is not None
+        else await db.max_sort_order() + 10
+    )
+    await db.create_indicator(key, body.display_name, body.kind, sort_order)
+    if body.rule:
+        await db.create_rule(body.rule.event_type, body.rule.checkpoint, key, body.rule.op)
+    await reload_dictionaries(request.app)
+    return {"status": "ok", "key": key}
+
+
+@app.patch("/api/indicators/{key}")
+async def patch_indicator(key: str, body: IndicatorPatch, request: Request):
+    db: Database = request.app.state.db
+    if not await db.indicator_exists(key):
+        raise HTTPException(status_code=404, detail=f"Indicator '{key}' not found")
+    await db.update_indicator(
+        key,
+        display_name=body.display_name,
+        kind=body.kind,
+        sort_order=body.sort_order,
+        enabled=body.enabled,
+    )
+    await reload_dictionaries(request.app)
+    return {"status": "ok"}
+
+
+@app.delete("/api/indicators/{key}")
+async def delete_indicator(key: str, request: Request):
+    db: Database = request.app.state.db
+    if not await db.indicator_exists(key):
+        raise HTTPException(status_code=404, detail=f"Indicator '{key}' not found")
+    await db.delete_indicator(key)
+    await reload_dictionaries(request.app, prune=True)
+    return {"status": "ok"}
+
+
+@app.post("/api/event-rules")
+async def create_event_rule(body: RuleIn, request: Request):
+    db: Database = request.app.state.db
+    if not body.indicator_key:
+        raise HTTPException(status_code=400, detail="indicator_key is required")
+    if not await db.indicator_exists(body.indicator_key):
+        raise HTTPException(
+            status_code=404, detail=f"Indicator '{body.indicator_key}' not found"
+        )
+    await db.create_rule(body.event_type, body.checkpoint, body.indicator_key, body.op)
+    await reload_dictionaries(request.app)
+    return {"status": "ok"}
+
+
+@app.delete("/api/event-rules")
+async def delete_event_rule(event_type: str, indicator_key: str, request: Request):
+    await request.app.state.db.delete_rule(event_type, indicator_key)
+    await reload_dictionaries(request.app)
+    return {"status": "ok"}
+
+
+@app.delete("/api/event-catalog/{event_type}")
+async def dismiss_observed_event(event_type: str, request: Request):
+    await request.app.state.db.delete_observed_event(event_type)
+    return {"status": "ok"}
 
 
 @app.get("/health")

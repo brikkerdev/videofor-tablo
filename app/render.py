@@ -172,7 +172,13 @@ def render_areas(
                   top_color, board.top_panel.stunt)
         )
 
-    visible = [ind for ind in indicators if board.line(ind.key).enabled]
+    # Порядок вывода задаётся порядком board.lines (drag&drop в редакторе);
+    # показатели без строки в конфиге добавляются в конце по sort_order из БД.
+    ind_by_key = {ind.key: ind for ind in indicators}
+    ordered_keys = [ln.key for ln in board.lines if ln.key in ind_by_key]
+    seen = set(ordered_keys)
+    ordered_keys += [ind.key for ind in indicators if ind.key not in seen]
+    visible = [ind_by_key[k] for k in ordered_keys if board.line(k).enabled]
     region_h = height - top_h
     n = len(visible)
     if n:

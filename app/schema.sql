@@ -46,6 +46,16 @@ create table if not exists config (
     updated_at timestamptz not null default now()
 );
 
+create table if not exists observed_events (
+    event_type  text primary key,
+    object_type text,
+    checkpoint  text,
+    last_value  integer,
+    count       bigint      not null default 0,
+    first_seen  timestamptz not null default now(),
+    last_seen   timestamptz not null default now()
+);
+
 insert into indicators (key, display_name, kind, sort_order) values
     ('violations_day',       'Нарушения за день',     'daily', 10),
     ('students_on_track',    'Ученики на треке',      'gauge', 20),

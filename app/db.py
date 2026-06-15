@@ -122,3 +122,114 @@ class Database:
 
     async def set_pushed_at(self) -> None:
         await self.pool.execute("update push_state set pushed_at = now() where id = 1")
+
+    # ── Реестр наблюдаемых типов событий ──────────────────────────────
+
+    async def record_observed_event(self, event: EventIn) -> None:
+        await self.pool.execute(
+            "insert into observed_events "
+            "(event_type, object_type, checkpoint, last_value, count) "
+            "values ($1, $2, $3, $4, 1) "
+            "on conflict (event_type) do update set "
+            "  object_type = excluded.object_type, "
+            "  checkpoint   = excluded.checkpoint, "
+            "  last_value   = excluded.last_value, "
+            "  count        = observed_events.count + 1, "
+            "  last_seen    = now()",
+            event.event_type, event.object_type, event.checkpoint, event.value,
+        )
+
+    async def list_observed_events(self) -> list[dict]:
+        rows = await self.pool.fetch(
+            "select event_type, object_type, checkpoint, last_value, count, "
+            "       first_seen, last_seen "
+            "from observed_events order by last_seen desc"
+        )
+        return [dict(r) for r in rows]
+
+    async def delete_observed_event(self, event_type: str) -> None:
+        await self.pool.execute(
+            "delete from observed_events where event_type = $1", event_type
+        )
+
+    # ── Справочники: показатели и правила (полное чтение) ─────────────
+
+    async def load_all_indicators(self) -> list[dict]:
+        rows = await self.pool.fetch(
+            "select key, display_name, kind, sort_order, enabled "
+            "from indicators order by sort_order"
+        )
+        return [dict(r) for r in rows]
+
+    async def load_all_indicator_keys(self) -> set[str]:
+        rows = await self.pool.fetch("select key from indicators")
+        return {r["key"] for r in rows}
+
+    async def load_all_rules(self) -> list[dict]:
+        rows = await self.pool.fetch(
+            "select event_type, checkpoint, indicator_key, op, enabled "
+            "from event_rules"
+        )
+        return [dict(r) for r in rows]
+
+    async def max_sort_order(self) -> int:
+        return await self.pool.fetchval(
+            "select coalesce(max(sort_order), 0) from indicators"
+        )
+
+    # ── Справочники: мутации ──────────────────────────────────────────
+
+    async def create_indicator(
+        self, key: str, display_name: str, kind: str, sort_order: int
+    ) -> None:
+        await self.pool.execute(
+            "insert into indicators (key, display_name, kind, sort_order) "
+            "values ($1, $2, $3, $4)",
+            key, display_name, kind, sort_order,
+        )
+
+    async def update_indicator(self, key: str, **fields) -> None:
+        allowed = ("display_name", "kind", "sort_order", "enabled")
+        sets = [(f, v) for f, v in fields.items() if f in allowed and v is not None]
+        if not sets:
+            return
+        cols = ", ".join(f"{f} = ${i + 2}" for i, (f, _) in enumerate(sets))
+        await self.pool.execute(
+            f"update indicators set {cols} where key = $1",
+            key, *[v for _, v in sets],
+        )
+
+    async def delete_indicator(self, key: str) -> None:
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "delete from event_rules where indicator_key = $1", key
+                )
+                await conn.execute(
+                    "delete from counter_values where indicator_key = $1", key
+                )
+                await conn.execute("delete from indicators where key = $1", key)
+
+    async def indicator_exists(self, key: str) -> bool:
+        return bool(
+            await self.pool.fetchval(
+                "select 1 from indicators where key = $1", key
+            )
+        )
+
+    async def create_rule(
+        self, event_type: str, checkpoint: str | None, indicator_key: str, op: str
+    ) -> None:
+        await self.pool.execute(
+            "insert into event_rules (event_type, checkpoint, indicator_key, op) "
+            "values ($1, $2, $3, $4) "
+            "on conflict (event_type, indicator_key) do update set "
+            "  checkpoint = excluded.checkpoint, op = excluded.op, enabled = true",
+            event_type, checkpoint, indicator_key, op,
+        )
+
+    async def delete_rule(self, event_type: str, indicator_key: str) -> None:
+        await self.pool.execute(
+            "delete from event_rules where event_type = $1 and indicator_key = $2",
+            event_type, indicator_key,
+        )

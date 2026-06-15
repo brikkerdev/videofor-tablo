@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -61,3 +62,25 @@ class BoardConfig(BaseModel):
             if ln.key == key:
                 return ln
         return LineConfig(key=key)
+
+
+class RuleIn(BaseModel):
+    event_type: str
+    checkpoint: str | None = None
+    indicator_key: str | None = None  # для создания показателя подставляется сервером
+    op: Literal["inc", "dec", "set"] = "inc"
+
+
+class IndicatorIn(BaseModel):
+    key: str | None = None  # по умолчанию — slug из event_type/display_name
+    display_name: str
+    kind: Literal["daily", "gauge"] = "daily"
+    sort_order: int | None = None
+    rule: RuleIn | None = None
+
+
+class IndicatorPatch(BaseModel):
+    display_name: str | None = None
+    kind: Literal["daily", "gauge"] | None = None
+    sort_order: int | None = None
+    enabled: bool | None = None
