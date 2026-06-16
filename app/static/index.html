@@ -536,12 +536,8 @@ input[type=color].color-pick {
               Общие параметры строк
             </div>
             <div class="form-row">
-              <span class="form-label">Выравнивание</span>
-              <select class="form-input" v-model="cfg.board.align">
-                <option value="left">слева</option>
-                <option value="center">по центру</option>
-                <option value="right">справа</option>
-              </select>
+              <span class="form-label">Отступ от краёв, px</span>
+              <input type="number" class="form-input" v-model.number="cfg.board.padding" min="0" max="40" style="width:5em">
               <span style="font-size:13px;color:#757575;margin-left:12px">Столбцы</span>
               <select class="form-input" v-model.number="cfg.board.columns">
                 <option :value="1">1</option>
@@ -1524,15 +1520,22 @@ createApp({
       nc.fillStyle = '#080604';
       nc.fillRect(0, 0, bw, bh);
 
+      // Рамка области шире текста (шрифт панели крупнее экранного), поэтому в
+      // превью прижимаем текст к краю области так же, как на панели: метки —
+      // влево, значения — вправо. Иначе текст «гулял» бы по центру рамки.
       (p.areas || []).forEach(a => {
         const x = +a.x, y = +a.y, w = +a.w, h = +a.h;
         nc.fillStyle = argbToCss(a.fontcolor);
         nc.font = `${Math.max(4, +a.fontsize)}px ${a.fontname || 'Arial'}`;
         nc.textBaseline = 'middle';
-        nc.textAlign = 'center';
+        const align = a.align || 'left';
+        let tx;
+        if (align === 'right')       { nc.textAlign = 'right';  tx = x + w; }
+        else if (align === 'center') { nc.textAlign = 'center'; tx = x + w / 2; }
+        else                         { nc.textAlign = 'left';   tx = x; }
         nc.save();
         nc.beginPath(); nc.rect(x, y, w, h); nc.clip();
-        nc.fillText(a.msg, x + w / 2, y + h / 2);
+        nc.fillText(a.msg, tx, y + h / 2);
         nc.restore();
       });
 

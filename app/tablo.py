@@ -9,6 +9,14 @@ logger = logging.getLogger("app.tablo")
 BATCH_SIZE = 4
 INTER_BATCH_DELAY = 0.4
 
+# Поля, которые понимает шлюз. Лишние ключи (например подсказка `align`
+# для предпросмотра) в message.json не отправляем.
+_DEVICE_KEYS = ("id", "msg", "x", "y", "w", "h", "fontname", "fontsize", "fontcolor", "stunt")
+
+
+def _device_area(area: dict) -> dict:
+    return {k: area[k] for k in _DEVICE_KEYS if k in area}
+
 
 def _clear_area(area_id: str) -> dict:
     return {
@@ -148,7 +156,7 @@ class TabloClient:
         if not self.connected:
             raise RuntimeError("табло не подключено, push отложен")
 
-        payload = list(areas)
+        payload = [_device_area(a) for a in areas]
         count = len(areas)
         if self._last_max is not None:
             payload.extend(_clear_area(str(i)) for i in range(count, self._last_max + 1))

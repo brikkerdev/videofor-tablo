@@ -50,7 +50,7 @@ class BoardConfig(BaseModel):
     top_panel: TopPanel = Field(default_factory=TopPanel)
     lines: list[LineConfig] = Field(default_factory=list)
     columns: int = 1
-    align: str = "left"
+    padding: int = Field(default=3, ge=0, le=40)
     fontname: str = "Arial"
     fontsize: int = 16
     stunt: int = 0
