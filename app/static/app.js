@@ -2,35 +2,34 @@ const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vu
 
 createApp({
   setup() {
-    
-    const UI_KEY    = 'tablo.editor.ui';     
-    const DRAFT_KEY = 'tablo.editor.draft';  
+    const UI_KEY    = 'tablo.editor.ui';
+    const DRAFT_KEY = 'tablo.editor.draft';
     const LS = {
       get(key) {
         try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
         catch { return null; }
       },
       set(key, val) {
-        try { localStorage.setItem(key, JSON.stringify(val)); } catch {  }
+        try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
       },
       remove(key) {
-        try { localStorage.removeItem(key); } catch {  }
+        try { localStorage.removeItem(key); } catch {}
       },
     };
     const savedUI = LS.get(UI_KEY) || {};
 
-    
-    const mini   = ref(savedUI.mini   ?? false);
+    /* ── sidebar ── */
+    const mini    = ref(savedUI.mini    ?? false);
     const devOpen = ref(savedUI.devOpen ?? true);
     const repOpen = ref(savedUI.repOpen ?? false);
 
     const BASE = window.location.origin;
 
     const topNav = [
-      { icon:'vertical_split', label:'Панель наблюдения',  href: BASE + '/monitoring' },
-      { icon:'event',          label:'Журнал событий',     href: BASE + '/events' },
-      { icon:'inventory_2',    label:'Архив',              href: BASE + '/archive' },
-      { icon:'display_settings',label:'Конструктор',       href: BASE + '/builder/configs' },
+      { icon:'vertical_split',   label:'Панель наблюдения',        href: BASE + '/monitoring' },
+      { icon:'event',             label:'Журнал событий',           href: BASE + '/events' },
+      { icon:'inventory_2',       label:'Архив',                    href: BASE + '/archive' },
+      { icon:'display_settings',  label:'Конструктор',              href: BASE + '/builder/configs' },
     ];
     const devNav = [
       { icon:'video_call',  label:'Камеры',                      href: BASE + '/cameras' },
@@ -40,42 +39,51 @@ createApp({
       { icon:'monitor',     label:'Информационные табло',        href: '#', active: true },
     ];
     const repNav = [
-      { icon:'terminal',      label:'Журнал действий',    href: BASE + '/activity-log' },
-      { icon:'terminal',      label:'Журнал изменений',   href: BASE + '/changes-log' },
-      { icon:'switch_account',label:'Журнал авторизаций', href: BASE + '/login-attempt' },
-      { icon:'event_note',    label:'Отчет по событиям',  href: BASE + '/events-report' },
+      { icon:'terminal',       label:'Журнал действий',    href: BASE + '/activity-log' },
+      { icon:'terminal',       label:'Журнал изменений',   href: BASE + '/changes-log' },
+      { icon:'switch_account', label:'Журнал авторизаций', href: BASE + '/login-attempt' },
+      { icon:'event_note',     label:'Отчет по событиям',  href: BASE + '/events-report' },
     ];
     const bottomNav = [
-      { icon:'domain',            label:'Подразделения', href: BASE + '/companies' },
-      { icon:'person',            label:'Пользователи',  href: BASE + '/users' },
-      { icon:'domain_verification',label:'Лицензии',     href: BASE + '/license' },
-      { icon:'lan',               label:'Диагностика',   href: BASE + '/diagnostics' },
-      { icon:'code',              label:'О системе',     href: BASE + '/version' },
+      { icon:'domain',              label:'Подразделения', href: BASE + '/companies' },
+      { icon:'person',              label:'Пользователи',  href: BASE + '/users' },
+      { icon:'domain_verification', label:'Лицензии',      href: BASE + '/license' },
+      { icon:'lan',                 label:'Диагностика',   href: BASE + '/diagnostics' },
+      { icon:'code',                label:'О системе',     href: BASE + '/version' },
     ];
 
-    
-    const tab       = ref(savedUI.tab ?? 'overview');
-    const cfg       = ref(null);   
-    const stateData = ref(null);  
-    const status    = ref(null);  
-    const saving      = ref(false);
-    const pushing     = ref(false);
-    const clearing    = ref(false);
-    const adjustStep  = ref(savedUI.adjustStep ?? 10);
-    const cvs         = ref(null);  
-    const hasDraft    = ref(false); 
-    let   baseline    = null;        
-    const dragIndex     = ref(null); 
-    const dragOverIndex = ref(null);
-    const modalIndex    = ref(null); 
-    const eventModalOpen = ref(false); 
-    const catalog        = ref(null);  
-    const savingEvent    = ref(false); 
-    const createForm     = ref(null); 
-    const bindForm       = ref(null);  
-    const confirmState   = ref(null); 
+    /* ── state ── */
+    const tab        = ref(savedUI.tab ?? 'overview');
+    const cfg        = ref(null);
+    const stateData  = ref(null);
+    const status     = ref(null);
+    const pushLog       = ref([]);
+    const pushLogFilter = ref('');
+    const filteredPushLog = computed(() =>
+      pushLogFilter.value ? pushLog.value.filter(e => e.trigger === pushLogFilter.value) : pushLog.value
+    );
+    const saving     = ref(false);
+    const pushing    = ref(false);
+    const clearing   = ref(false);
+    const adjustStep = ref(savedUI.adjustStep ?? 10);
+    const cvs        = ref(null);
+    const hasDraft   = ref(false);
+    let   baseline   = null;
 
-    
+    const dragIndex     = ref(null);
+    const dragOverIndex = ref(null);
+    const modalIndex    = ref(null);
+    const eventModalOpen = ref(false);
+    const catalog        = ref(null);
+    const savingEvent    = ref(false);
+    const createForm     = ref(null);
+    const editForm       = ref(null);
+    const bindForm       = ref(null);
+    const confirmState   = ref(null);
+    const connForm       = ref(null);
+    const savingConn     = ref(false);
+
+    /* ── computed: status ── */
     const connDot = computed(() => {
       if (!status.value) return 'dot-grey';
       if (!status.value.reachable) return 'dot-err';
@@ -85,12 +93,11 @@ createApp({
     const connLabel = computed(() => {
       if (!status.value) return 'Проверка...';
       if (!status.value.reachable) return 'Нет связи со шлюзом';
-      if (!status.value.connected) return 'Шлюз доступен, табло не подключено';
-      const d = status.value.device || {};
+      if (!status.value.connected) return 'Шлюз доступен, матрица не подключена';
       return 'Подключено';
     });
-    const statusDetail = computed(() => status.value?.url || '');
-    const lastPushLine = computed(() => {
+    const statusDetail  = computed(() => status.value?.url || '');
+    const lastPushLine  = computed(() => {
       const lp = status.value?.last_push;
       if (!lp?.at) return '';
       return lp.ok
@@ -102,7 +109,6 @@ createApp({
       return d ? `${d.width} × ${d.height} px` : '256 × 96 px';
     });
 
-    
     const linesWithMeta = computed(() => {
       if (!cfg.value) return [];
       const byKey = {};
@@ -113,13 +119,12 @@ createApp({
       }));
     });
 
-    
     const modalLine = computed(() => {
       if (modalIndex.value === null) return {};
       return linesWithMeta.value[modalIndex.value] || {};
     });
 
-    
+    /* ── drag & drop ── */
     const onDragStart = (i, e) => {
       dragIndex.value = i;
       if (e.dataTransfer) {
@@ -140,11 +145,11 @@ createApp({
       lines.splice(i, 0, moved);
     };
 
-    
+    /* ── line modal ── */
     const openLineModal  = (i) => { modalIndex.value = i; };
     const closeLineModal = () => { modalIndex.value = null; };
 
-    
+    /* ── confirm dialog ── */
     const askConfirm = (opts) => new Promise((resolve) => {
       confirmState.value = {
         title: opts.title || 'Подтверждение',
@@ -160,12 +165,13 @@ createApp({
       if (st) st.resolve(val);
     };
     const confirmYes = () => _confirmResolve(true);
-    const confirmNo = () => _confirmResolve(false);
+    const confirmNo  = () => _confirmResolve(false);
 
-    
-    const slugify = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-    const opLabel = (op) => ({ inc: '+', dec: '−', set: '=' }[op] || op);
+    /* ── indicator constructor ── */
+    const slugify  = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    const opLabel  = (op) => ({ inc: '+', dec: '−', set: '=' }[op] || op);
     const indStatus = (ind) => (ind.enabled && ind.line_enabled) ? 'displayed' : 'hidden';
+
     const triggersByIndicator = computed(() => {
       const map = {};
       for (const ev of (catalog.value?.events || []))
@@ -217,6 +223,7 @@ createApp({
         throw new Error(msg);
       }
     };
+
     const openCreate = (ev) => {
       createForm.value = {
         display_name: ev ? ev.event_type : '',
@@ -227,6 +234,7 @@ createApp({
         op: 'inc',
       };
       bindForm.value = null;
+      editForm.value = null;
     };
     const submitCreate = async () => {
       const f = createForm.value;
@@ -242,15 +250,56 @@ createApp({
       } catch (e) { toast('err', 'Ошибка: ' + e.message); }
       finally { savingEvent.value = false; }
     };
+
+    const openEdit = (ind) => {
+      editForm.value = {
+        key: ind.key,
+        display_name: ind.display_name,
+        kind: ind.kind,
+        sort_order: ind.sort_order,
+        enabled: ind.enabled,
+      };
+      createForm.value = null;
+      bindForm.value = null;
+    };
+    const submitEdit = async () => {
+      const f = editForm.value;
+      if (!f || !f.display_name) { toast('err', 'Укажите название'); return; }
+      savingEvent.value = true;
+      try {
+        const r = await fetch('/api/indicators/' + encodeURIComponent(f.key), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            display_name: f.display_name,
+            kind: f.kind,
+            sort_order: Number(f.sort_order),
+            enabled: f.enabled,
+          }),
+        });
+        if (!r.ok) {
+          let msg = 'HTTP ' + r.status;
+          try { msg = (await r.json()).message || msg; } catch {}
+          throw new Error(msg);
+        }
+        toast('ok', 'Показатель изменён');
+        editForm.value = null;
+        await refreshAll();
+      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
+      finally { savingEvent.value = false; }
+    };
+
     const openTrigger = (ind) => {
       bindForm.value = { indicator_key: ind.key, indicator_locked: true,
                          event_type: '', event_locked: false, checkpoint: '', op: 'inc' };
       createForm.value = null;
+      editForm.value = null;
     };
     const openBind = (ev) => {
       bindForm.value = { indicator_key: catalog.value?.indicators[0]?.key || '', indicator_locked: false,
                          event_type: ev.event_type, event_locked: true, checkpoint: ev.checkpoint || '', op: 'inc' };
       createForm.value = null;
+      editForm.value = null;
     };
     const submitBind = async () => {
       const f = bindForm.value;
@@ -308,7 +357,7 @@ createApp({
       else if (eventModalOpen.value) closeEventModal();
     };
 
-    
+    /* ── API ── */
     const loadConfig = async () => {
       try {
         const r = await fetch('/api/display/config');
@@ -326,7 +375,6 @@ createApp({
       } catch (e) { toast('err', 'Ошибка загрузки конфига: ' + e.message); }
     };
 
-    
     const discardDraft = () => {
       if (!cfg.value || baseline === null) return;
       cfg.value.board = JSON.parse(baseline);
@@ -339,14 +387,21 @@ createApp({
       try {
         const r = await fetch('/api/state');
         stateData.value = await r.json();
-      } catch {  }
+      } catch { /* silent */ }
     };
 
     const loadStatus = async () => {
       try {
         const r = await fetch('/api/tablo/status');
         status.value = await r.json();
-      } catch {  }
+      } catch { /* silent */ }
+    };
+
+    const loadPushLog = async () => {
+      try {
+        const r = await fetch('/api/tablo/push-log');
+        pushLog.value = await r.json();
+      } catch { /* silent */ }
     };
 
     const loadPreview = async () => {
@@ -390,10 +445,7 @@ createApp({
       finally { pushing.value = false; }
     };
 
-    const saveAndPush = async () => {
-      await save();
-      await pushNow();
-    };
+    const saveAndPush = async () => { await save(); await pushNow(); };
 
     const clearBoard = async () => {
       clearing.value = true;
@@ -413,7 +465,31 @@ createApp({
       } catch (e) { toast('err', 'Ошибка переподключения: ' + e.message); }
     };
 
-    
+    const openConnForm = async () => {
+      try {
+        const r = await fetch('/api/tablo/connection');
+        connForm.value = await r.json();
+      } catch (e) { toast('err', 'Ошибка загрузки настроек: ' + e.message); }
+    };
+
+    const saveConn = async () => {
+      if (!connForm.value) return;
+      savingConn.value = true;
+      try {
+        const r = await fetch('/api/tablo/connection', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(connForm.value),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        toast('ok', 'Настройки сохранены, переподключение...');
+        connForm.value = null;
+        setTimeout(() => loadStatus(), 2000);
+      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
+      finally { savingConn.value = false; }
+    };
+
+    /* ── color helpers ── */
     const argbToHex = (argb) => {
       const m = /^0x[0-9a-f]{2}([0-9a-f]{6})$/i.exec(argb || '');
       return m ? '#' + m[1] : '#ffffff';
@@ -424,7 +500,7 @@ createApp({
       return '0x' + alpha + hex.replace('#', '').toLowerCase();
     };
 
-    
+    /* ── manual adjust ── */
     const adjust = async (key, delta) => {
       try {
         const r = await fetch('/api/state/adjust', {
@@ -441,7 +517,6 @@ createApp({
       } catch (e) { toast('err', 'Ошибка корректировки: ' + e.message); }
     };
 
-    
     const setBrightness = async (val) => {
       try {
         await fetch('/api/tablo/brightness', {
@@ -449,10 +524,10 @@ createApp({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ value: val }),
         });
-      } catch {  }
+      } catch { /* silent */ }
     };
 
-    
+    /* ── threshold helper ── */
     const setThreshold = (i, field, val) => {
       const ln = cfg.value.board.lines[i];
       if (!ln.threshold) ln.threshold = { value: null, op: '>=', color: '0xffff0000', target: 'line', duration_seconds: 0 };
@@ -464,7 +539,7 @@ createApp({
       if (ln.threshold.value === null) ln.threshold = null;
     };
 
-    
+    /* ── canvas drawing ── */
     function argbToCss(s) {
       const m = /^0x[0-9a-fA-F]{2}([0-9a-fA-F]{6})$/.exec(s || '');
       return m ? '#' + m[1] : '#ffffff';
@@ -477,10 +552,10 @@ createApp({
       const dev = cfg.value?.device || {};
       const bw = dev.width  || 256;
       const bh = dev.height || 96;
+
       const nat = document.createElement('canvas');
       nat.width = bw; nat.height = bh;
       const nc = nat.getContext('2d');
-
       nc.fillStyle = '#080604';
       nc.fillRect(0, 0, bw, bh);
 
@@ -490,30 +565,26 @@ createApp({
         nc.font = `${Math.max(4, +a.fontsize)}px ${a.fontname || 'Arial'}`;
         nc.textBaseline = 'middle';
         const align = a.align || 'left';
-        nc.textAlign = align;
-        const tx = align === 'left' ? x : align === 'right' ? x + w : x + w / 2;
+        let tx;
+        if (align === 'right')       { nc.textAlign = 'right';  tx = x + w; }
+        else if (align === 'center') { nc.textAlign = 'center'; tx = x + w / 2; }
+        else                         { nc.textAlign = 'left';   tx = x; }
         nc.save();
         nc.beginPath(); nc.rect(x, y, w, h); nc.clip();
         nc.fillText(a.msg, tx, y + h / 2);
         nc.restore();
       });
+
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(nat, 0, 0, c.width, c.height);
+
       const sx = c.width / bw, sy = c.height / bh;
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       for (let xi = 0; xi < bw; xi++) ctx.fillRect(Math.round(xi * sx + sx - 1), 0, 1, c.height);
       for (let yi = 0; yi < bh; yi++) ctx.fillRect(0, Math.round(yi * sy + sy - 1), c.width, 1);
     }
 
-    
-    const pushLog = ref([]);
-    const loadPushLog = async () => {
-      try {
-        const r = await fetch('/api/tablo/push-log');
-        if (r.ok) pushLog.value = await r.json();
-      } catch {  }
-    };
-
+    /* ── watchers ── */
     watch(tab, async (val) => {
       if (val === 'overview') {
         await nextTick();
@@ -524,7 +595,6 @@ createApp({
       }
     });
 
-    
     watch([mini, devOpen, repOpen, tab, adjustStep], () => {
       LS.set(UI_KEY, {
         mini: mini.value,
@@ -535,7 +605,6 @@ createApp({
       });
     });
 
-    
     watch(() => cfg.value && cfg.value.board, (board) => {
       if (!board || baseline === null) return;
       if (JSON.stringify(board) === baseline) {
@@ -547,7 +616,7 @@ createApp({
       }
     }, { deep: true });
 
-    
+    /* ── toasts ── */
     const toasts = ref([]);
     let _tid = 0;
     const toast = (cls, msg, ms = 3500) => {
@@ -560,44 +629,46 @@ createApp({
       }, ms);
     };
 
-    
-    let t1, t2;
+    /* ── lifecycle ── */
+    let t1, t2, t3;
     onMounted(async () => {
       window.addEventListener('keydown', onKeydown);
       await Promise.all([loadConfig(), loadState(), loadStatus()]);
       await loadPreview();
-      await loadPushLog();
       t1 = setInterval(loadState,  10_000);
       t2 = setInterval(loadStatus, 10_000);
+      t3 = setInterval(async () => {
+        if (tab.value === 'overview') await loadPreview();
+      }, 10_000);
     });
     onUnmounted(() => {
-      clearInterval(t1); clearInterval(t2);
+      clearInterval(t1); clearInterval(t2); clearInterval(t3);
       window.removeEventListener('keydown', onKeydown);
     });
 
     return {
       mini, devOpen, repOpen,
       topNav, devNav, repNav, bottomNav,
-      tab, cfg, stateData, status,
+      tab, cfg, stateData, status, pushLog, pushLogFilter, filteredPushLog,
       saving, pushing, clearing, adjustStep, cvs,
       hasDraft, discardDraft,
       dragIndex, dragOverIndex, modalIndex, modalLine,
       onDragStart, onDragOver, onDragEnd, onDrop,
       openLineModal, closeLineModal,
-      eventModalOpen, catalog, savingEvent, createForm, bindForm,
+      eventModalOpen, catalog, savingEvent, createForm, editForm, bindForm,
       confirmState, confirmYes, confirmNo,
       opLabel, indStatus, triggersByIndicator, unmappedRequests, eventTypeList,
       openEventModal, closeEventModal, loadCatalog,
-      openCreate, submitCreate, openTrigger, openBind, submitBind,
+      openCreate, submitCreate, openEdit, submitEdit, openTrigger, openBind, submitBind,
       detachRule, deleteIndicator, dismissEvent,
       connDot, connLabel, statusDetail, lastPushLine, deviceLabel,
+      connForm, savingConn, openConnForm, saveConn,
       linesWithMeta,
-      loadConfig, loadState, loadStatus, loadPreview,
+      loadConfig, loadState, loadStatus, loadPreview, loadPushLog,
       save, pushNow, saveAndPush, clearBoard, reconnect,
       adjust, setBrightness,
       argbToHex, hexToArgb,
       setThreshold,
-      pushLog, loadPushLog,
       toasts,
     };
   },

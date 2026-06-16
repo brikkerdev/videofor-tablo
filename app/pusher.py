@@ -43,10 +43,12 @@ class Pusher:
         self.last_push_at = None
         self._threshold_since: dict[str, datetime] = {}
         self._threshold_prev: dict[str, bool] = {}
+        self._trigger: str = "startup"
         self.push_log: deque = deque(maxlen=PUSH_LOG_SIZE)
 
-    def mark_dirty(self) -> None:
+    def mark_dirty(self, trigger: str = "manual") -> None:
         self.paused = False
+        self._trigger = trigger
         self._dirty.set()
 
     def _clock_running(self) -> bool:
@@ -60,6 +62,7 @@ class Pusher:
                 self.state.rollover_if_needed()
                 if not self._clock_running():
                     continue
+                self._trigger = "clock"
             loop = asyncio.get_running_loop()
             wait = MIN_PUSH_INTERVAL - (loop.time() - self._last_push_t)
             if wait > 0:
@@ -111,13 +114,13 @@ class Pusher:
                 self.last_ok = True
                 self.last_error = ""
                 self.last_push_at = now
-                self.push_log.appendleft({"at": now.strftime("%H:%M:%S"), "ok": True, "error": ""})
+                self.push_log.appendleft({"at": now.strftime("%H:%M:%S"), "ok": True, "error": "", "trigger": self._trigger})
                 logger.info("Состояние доставлено на табло (%d областей)", len(areas))
             except Exception as exc:
                 self.last_ok = False
                 self.last_error = str(exc)
                 self.last_push_at = now
-                self.push_log.appendleft({"at": now.strftime("%H:%M:%S"), "ok": False, "error": str(exc)})
+                self.push_log.appendleft({"at": now.strftime("%H:%M:%S"), "ok": False, "error": str(exc), "trigger": self._trigger})
                 logger.warning("Push на табло не удался: %s", exc)
                 self._dirty.set()
                 await asyncio.sleep(self.retry_seconds)

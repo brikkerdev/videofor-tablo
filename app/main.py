@@ -75,7 +75,7 @@ async def reload_dictionaries(app: FastAPI, prune: bool = False) -> None:
         app.state.board = board
         app.state.pusher.board = board
         await db.set_config(CONFIG_KEY, board.model_dump_json())
-    app.state.pusher.mark_dirty()
+    app.state.pusher.mark_dirty("reload")
 
 
 @asynccontextmanager
@@ -92,11 +92,16 @@ async def lifespan(app: FastAPI):
 
     board = build_board(await db.get_config(CONFIG_KEY), state.indicators)
 
+    tablo_url        = await db.get_config("tablo_url")        or settings.tablo_url
+    tablo_token      = await db.get_config("tablo_token")      or settings.tablo_token
+    tablo_matrix_ip  = await db.get_config("tablo_matrix_ip")  or settings.tablo_matrix_ip
+    tablo_matrix_pass= await db.get_config("tablo_matrix_pass")or settings.tablo_matrix_pass
+
     tablo = TabloClient(
-        settings.tablo_url,
-        settings.tablo_token,
-        settings.tablo_matrix_ip,
-        settings.tablo_matrix_pass,
+        tablo_url,
+        tablo_token,
+        tablo_matrix_ip,
+        tablo_matrix_pass,
     )
     tablo.start()
     width, height = BOARD_W, BOARD_H
@@ -110,7 +115,7 @@ async def lifespan(app: FastAPI):
 
     pusher = Pusher(tablo, db, state, board, settings.push_retry_seconds, width, height)
     if await db.is_dirty():
-        pusher.mark_dirty()
+        pusher.mark_dirty("startup")
     pusher_task = asyncio.create_task(pusher.run())
 
     app.state.db = db
@@ -192,7 +197,7 @@ async def receive_event(
         cache.updated_at = cache.now()
         cache.last_event_at = cache.now()
 
-    request.app.state.pusher.mark_dirty()
+    request.app.state.pusher.mark_dirty("event")
     return {
         "status": "success",
         "message": "Data received and displayed",
@@ -232,7 +237,7 @@ async def put_display_config(body: BoardConfig, request: Request):
         request.app.state.board = body
         request.app.state.pusher.board = body
         await request.app.state.db.set_config(CONFIG_KEY, body.model_dump_json())
-    request.app.state.pusher.mark_dirty()
+    request.app.state.pusher.mark_dirty("config")
     return {"board": body.model_dump()}
 
 
@@ -252,7 +257,7 @@ async def get_display_preview(request: Request):
 
 @app.post("/api/display/push")
 async def push_display(request: Request):
-    request.app.state.pusher.mark_dirty()
+    request.app.state.pusher.mark_dirty("push")
     return {"status": "ok"}
 
 
@@ -309,6 +314,38 @@ async def get_push_log(request: Request):
     return list(pusher.push_log)
 
 
+class TabloConnectionIn(BaseModel):
+    url: str = ""
+    token: str = ""
+    matrix_ip: str = ""
+    matrix_pass: str = "guest"
+
+
+@app.get("/api/tablo/connection")
+async def get_tablo_connection(request: Request):
+    db: Database = request.app.state.db
+    tablo: TabloClient = request.app.state.tablo
+    return {
+        "url":         await db.get_config("tablo_url")         or settings.tablo_url,
+        "token":       await db.get_config("tablo_token")       or settings.tablo_token,
+        "matrix_ip":   await db.get_config("tablo_matrix_ip")   or settings.tablo_matrix_ip,
+        "matrix_pass": await db.get_config("tablo_matrix_pass") or settings.tablo_matrix_pass,
+        "active_url":  tablo.base_url,
+    }
+
+
+@app.put("/api/tablo/connection")
+async def put_tablo_connection(body: TabloConnectionIn, request: Request):
+    db: Database = request.app.state.db
+    tablo: TabloClient = request.app.state.tablo
+    await db.set_config("tablo_url",         body.url)
+    await db.set_config("tablo_token",       body.token)
+    await db.set_config("tablo_matrix_ip",   body.matrix_ip)
+    await db.set_config("tablo_matrix_pass", body.matrix_pass)
+    asyncio.create_task(tablo.reconfigure(body.url, body.token, body.matrix_ip, body.matrix_pass))
+    return {"status": "ok"}
+
+
 class BrightnessIn(BaseModel):
     value: int = Field(ge=0, le=255)
 
@@ -340,7 +377,7 @@ async def adjust_state(body: AdjustIn, request: Request):
         cache.values[body.key] = new_val
         cache.updated_at = cache.now()
         await request.app.state.db.set_counter_value(cache.day, body.key, new_val)
-    request.app.state.pusher.mark_dirty()
+    request.app.state.pusher.mark_dirty("adjust")
     return {"key": body.key, "value": new_val}
 
 

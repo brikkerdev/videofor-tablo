@@ -446,14 +446,15 @@
       </template>
 
       <template v-if="tab==='connection'">
+        <!-- Статус подключения -->
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
-              Подключение к шлюзу
+              Статус подключения
             </div>
             <div class="form-row">
-              <span class="form-label">URL шлюза</span>
-              <span style="font-size:13px">{{ status?.url || '—' }}</span>
+              <span class="form-label">Активный URL</span>
+              <span style="font-size:13px;font-family:monospace">{{ status?.url || '—' }}</span>
             </div>
             <div class="form-row">
               <span class="form-label">Матрица</span>
@@ -462,9 +463,6 @@
             <div class="form-row">
               <span class="form-label">Яркость устройства</span>
               <span style="font-size:13px">{{ status?.device?.brightness ?? '—' }}</span>
-            </div>
-            <div style="font-size:12px;color:#9e9e9e;margin-top:8px">
-              Параметры подключения настраиваются через переменные окружения: TABLO_URL, TABLO_TOKEN, TABLO_MATRIX_IP.
             </div>
             <div class="row" style="gap:8px;margin-top:16px">
               <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
@@ -489,16 +487,79 @@
           </div>
         </div>
 
-        <div class="q-card" style="border-radius:4px">
+        <!-- Настройки подключения -->
+        <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
-              Журнал доставки
+              Параметры подключения
             </div>
-            <div v-if="!pushLog.length" style="font-size:13px;color:#9e9e9e">Нет записей</div>
-            <div v-for="entry in pushLog" :key="entry.at" style="font-size:13px;padding:4px 0;border-bottom:1px solid #f5f5f5;display:flex;gap:12px;align-items:flex-start">
+            <div v-if="connForm" style="display:flex;flex-direction:column;gap:0">
+              <div class="form-row">
+                <span class="form-label">URL шлюза</span>
+                <input class="form-input" v-model="connForm.url" placeholder="http://192.168.1.10" style="flex:1;min-width:0">
+              </div>
+              <div class="form-row">
+                <span class="form-label">Токен</span>
+                <input class="form-input" v-model="connForm.token" placeholder="оставить пустым если нет" style="flex:1;min-width:0">
+              </div>
+              <div class="form-row">
+                <span class="form-label">IP матрицы</span>
+                <input class="form-input" v-model="connForm.matrix_ip" placeholder="192.168.1.20" style="flex:1;min-width:0">
+              </div>
+              <div class="form-row">
+                <span class="form-label">Пароль матрицы</span>
+                <input class="form-input" v-model="connForm.matrix_pass" placeholder="guest" style="flex:1;min-width:0">
+              </div>
+              <div class="row" style="gap:8px;margin-top:8px">
+                <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                        :disabled="savingConn" @click="saveConn" type="button">
+                  <span class="q-focus-helper" tabindex="-1"></span>
+                  <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+                    <i class="q-icon notranslate material-icons" :class="{ spin: savingConn }" style="font-size:16px">{{ savingConn ? 'sync' : 'save' }}</i>
+                    Сохранить и переподключить
+                  </span>
+                </button>
+                <button class="link-btn" @click="connForm=null" type="button">Отмена</button>
+              </div>
+            </div>
+            <div v-else>
+              <div style="font-size:12px;color:#9e9e9e;margin-bottom:12px">
+                Параметры сохраняются в базе данных и переопределяют переменные окружения.
+              </div>
+              <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                      style="border:1px solid var(--q-primary);color:var(--q-primary);background:transparent"
+                      @click="openConnForm" type="button">
+                <span class="q-focus-helper" tabindex="-1"></span>
+                <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:4px">
+                  <i class="q-icon notranslate material-icons" style="font-size:16px">edit</i>
+                  Изменить параметры
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="q-card" style="border-radius:4px">
+          <div class="q-card__section q-card__section--vert">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+              <span style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px">Журнал доставки</span>
+              <select v-model="pushLogFilter" class="form-input" style="font-size:12px;padding:2px 6px;height:auto;min-width:0;width:auto">
+                <option value="">все</option>
+                <option value="event">event</option>
+                <option value="push">push</option>
+                <option value="config">config</option>
+                <option value="adjust">adjust</option>
+                <option value="clock">clock</option>
+                <option value="reload">reload</option>
+                <option value="startup">startup</option>
+              </select>
+            </div>
+            <div v-if="!filteredPushLog.length" style="font-size:13px;color:#9e9e9e">Нет записей</div>
+            <div v-for="entry in filteredPushLog" :key="entry.at + entry.trigger" style="font-size:13px;padding:4px 0;border-bottom:1px solid #f5f5f5;display:flex;gap:12px;align-items:center">
               <span style="font-family:monospace;color:#9e9e9e;flex-shrink:0">{{ entry.at }}</span>
-              <span :style="{ color: entry.ok ? '#388e3c' : '#c62828' }">{{ entry.ok ? 'OK' : 'ОШИБКА' }}</span>
-              <span v-if="!entry.ok" style="color:#424242">{{ entry.error }}</span>
+              <span class="th-badge" style="font-size:11px;padding:2px 6px;flex-shrink:0">{{ entry.trigger || '—' }}</span>
+              <span :style="{ color: entry.ok ? '#388e3c' : '#c62828' }" style="flex-shrink:0">{{ entry.ok ? 'OK' : 'ОШИБКА' }}</span>
+              <span v-if="!entry.ok" style="color:#424242;font-size:12px">{{ entry.error }}</span>
             </div>
           </div>
         </div>
@@ -573,16 +634,17 @@
             <option value="value">число</option>
           </select>
         </div>
-      </div>
-        <div class="form-row">
-          <span class="form-label">Длительность, сек</span>
-          <input type="number" class="form-input"
-                 :value="cfg.board.lines[modalIndex].threshold?.duration_seconds ?? 0"
-                 @input="setThreshold(modalIndex,'duration_seconds',+$event.target.value)"
-                 min="0" max="3600" style="width:5em"
-                 title="Строка горит заданным цветом N секунд после срабатывания, затем возвращается к обычному цвету">
-          <span style="font-size:12px;color:#9e9e9e">0 = пока превышен</span>
+          <div class="form-row">
+            <span class="form-label">Длительность, сек</span>
+            <input type="number" class="form-input"
+                   :value="cfg.board.lines[modalIndex].threshold?.duration_seconds ?? 0"
+                   @input="setThreshold(modalIndex,'duration_seconds',+$event.target.value)"
+                   min="0" max="3600" style="width:5em"
+                   title="Строка горит заданным цветом N секунд после срабатывания, затем возвращается к обычному цвету">
+            <span style="font-size:12px;color:#9e9e9e">0 = пока превышен</span>
+          </div>
         </div>
+      </div>
       <div class="modal__foot">
         <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
                 @click="closeLineModal" type="button">
@@ -672,10 +734,14 @@
                 <span class="th-badge" :class="indStatus(ind)==='displayed' ? 'badge-displayed' : 'badge-none'">
                   {{ indStatus(ind)==='displayed' ? 'выводится' : 'скрыт' }}
                 </span>
-                <button class="link-btn" style="margin-left:auto"
-                        @click="openEdit(ind)" type="button">изменить</button>
-                <button class="link-btn danger"
-                        @click="deleteIndicator(ind.key, ind.display_name)" type="button">удалить</button>
+                <button class="icon-btn" style="margin-left:auto;width:28px;height:28px"
+                        @click="openEdit(ind)" title="Изменить" type="button">
+                  <i class="q-icon notranslate material-icons" style="font-size:18px">edit</i>
+                </button>
+                <button class="icon-btn danger" style="width:28px;height:28px"
+                        @click="deleteIndicator(ind.key, ind.display_name)" title="Удалить" type="button">
+                  <i class="q-icon notranslate material-icons" style="font-size:18px">delete</i>
+                </button>
               </div>
 
               <!-- форма редактирования показателя -->
@@ -713,8 +779,10 @@
 
               <!-- привязанные запросы (триггеры) -->
               <div class="evt-map" v-for="t in (triggersByIndicator[ind.key] || [])" :key="t.event_type">
-                <i class="q-icon notranslate material-icons" style="font-size:16px;color:#9e9e9e">circle</i>
-                <span style="color:#757575">({{ opLabel(t.op) }}<template v-if="t.checkpoint">, {{ t.checkpoint }}</template>)</span>
+                <i class="q-icon notranslate material-icons" style="font-size:14px;color:#9e9e9e">circle</i>
+                <span style="font-family:monospace;font-size:12px;color:#424242">{{ t.event_type }}</span>
+                <span class="th-badge" style="font-size:11px;padding:2px 6px">{{ opLabel(t.op) }}</span>
+                <span v-if="t.checkpoint" style="font-size:12px;color:#757575">{{ t.checkpoint }}</span>
                 <button class="icon-btn" @click="detachRule(t.event_type, ind.key)" title="Отвязать" type="button" style="width:26px;height:26px">
                   <i class="q-icon notranslate material-icons" style="font-size:16px">link_off</i>
                 </button>
@@ -882,675 +950,6 @@
 </datalist>
 
 <script src="https://cdn.jsdelivr.net/npm/vue@3.4.0/dist/vue.global.prod.js"></script>
-<script>
-const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-
-createApp({
-  setup() {
-    /* ── localStorage: сохранение конфигурации редактора между сессиями ── */
-    const UI_KEY    = 'tablo.editor.ui';     // состояние интерфейса редактора
-    const DRAFT_KEY = 'tablo.editor.draft';  // несохранённый черновик правок табло
-    const LS = {
-      get(key) {
-        try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
-        catch { return null; }
-      },
-      set(key, val) {
-        try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* quota / private mode */ }
-      },
-      remove(key) {
-        try { localStorage.removeItem(key); } catch { /* ignore */ }
-      },
-    };
-    const savedUI = LS.get(UI_KEY) || {};
-
-    /* ── sidebar ── */
-    const mini   = ref(savedUI.mini   ?? false);
-    const devOpen = ref(savedUI.devOpen ?? true);
-    const repOpen = ref(savedUI.repOpen ?? false);
-
-    const BASE = window.location.origin;
-
-    const topNav = [
-      { icon:'vertical_split', label:'Панель наблюдения',  href: BASE + '/monitoring' },
-      { icon:'event',          label:'Журнал событий',     href: BASE + '/events' },
-      { icon:'inventory_2',    label:'Архив',              href: BASE + '/archive' },
-      { icon:'display_settings',label:'Конструктор',       href: BASE + '/builder/configs' },
-    ];
-    const devNav = [
-      { icon:'video_call',  label:'Камеры',                      href: BASE + '/cameras' },
-      { icon:'speaker',     label:'Громкоговорители',            href: BASE + '/loudspeakers' },
-      { icon:'devices',     label:'Исполнительные устройства',   href: BASE + '/executive-devices' },
-      { icon:'place',       label:'Локации',                     href: BASE + '/locations' },
-      { icon:'monitor',     label:'Информационные табло',        href: '#', active: true },
-    ];
-    const repNav = [
-      { icon:'terminal',      label:'Журнал действий',    href: BASE + '/activity-log' },
-      { icon:'terminal',      label:'Журнал изменений',   href: BASE + '/changes-log' },
-      { icon:'switch_account',label:'Журнал авторизаций', href: BASE + '/login-attempt' },
-      { icon:'event_note',    label:'Отчет по событиям',  href: BASE + '/events-report' },
-    ];
-    const bottomNav = [
-      { icon:'domain',            label:'Подразделения', href: BASE + '/companies' },
-      { icon:'person',            label:'Пользователи',  href: BASE + '/users' },
-      { icon:'domain_verification',label:'Лицензии',     href: BASE + '/license' },
-      { icon:'lan',               label:'Диагностика',   href: BASE + '/diagnostics' },
-      { icon:'code',              label:'О системе',     href: BASE + '/version' },
-    ];
-
-    /* ── state ── */
-    const tab       = ref(savedUI.tab ?? 'overview');
-    const cfg       = ref(null);   // {board, indicators, device}
-    const stateData = ref(null);   // /api/state
-    const status    = ref(null);   // /api/tablo/status
-    const saving      = ref(false);
-    const pushing     = ref(false);
-    const clearing    = ref(false);
-    const pushLog     = ref([]);
-    const adjustStep  = ref(savedUI.adjustStep ?? 10);
-    const cvs         = ref(null);   // canvas ref
-    const hasDraft    = ref(false);  // есть несохранённый черновик правок
-    let   baseline    = null;        // JSON серверной (сохранённой) конфигурации
-    const dragIndex     = ref(null); // индекс перетаскиваемой карточки
-    const dragOverIndex = ref(null); // индекс карточки под курсором при D&D
-    const modalIndex    = ref(null); // индекс показателя, открытого в конструкторе
-    const eventModalOpen = ref(false); // открыт ли конструктор показателей
-    const catalog        = ref(null);  // каталог /api/event-catalog
-    const savingEvent    = ref(false); // идёт создание/привязка
-    const createForm     = ref(null);  // форма создания нового показателя
-    const editForm       = ref(null);  // форма редактирования показателя
-    const bindForm       = ref(null);  // форма привязки запроса к показателю
-    const confirmState   = ref(null);  // диалог подтверждения {title,message,confirmLabel,danger,resolve}
-
-    /* ── computed: status card ── */
-    const connDot = computed(() => {
-      if (!status.value) return 'dot-grey';
-      if (!status.value.reachable) return 'dot-err';
-      if (!status.value.connected) return 'dot-warn';
-      return 'dot-ok';
-    });
-    const connLabel = computed(() => {
-      if (!status.value) return 'Проверка...';
-      if (!status.value.reachable) return 'Нет связи со шлюзом';
-      if (!status.value.connected) return 'Шлюз доступен, матрица не подключена';
-      const d = status.value.device || {};
-      return 'Подключено';
-    });
-    const statusDetail = computed(() => status.value?.url || '');
-    const lastPushLine = computed(() => {
-      const lp = status.value?.last_push;
-      if (!lp?.at) return '';
-      return lp.ok
-        ? `Последняя доставка: OK в ${lp.at}`
-        : `Последняя доставка: ОШИБКА в ${lp.at} — ${lp.error}`;
-    });
-    const deviceLabel = computed(() => {
-      const d = cfg.value?.device;
-      return d ? `${d.width} × ${d.height} px` : '256 × 96 px';
-    });
-
-    /* ── computed: lines with display_name ── */
-    const linesWithMeta = computed(() => {
-      if (!cfg.value) return [];
-      const byKey = {};
-      (cfg.value.indicators || []).forEach(ind => { byKey[ind.key] = ind; });
-      return (cfg.value.board.lines || []).map(ln => ({
-        ...ln,
-        display_name: byKey[ln.key]?.display_name || ln.key,
-      }));
-    });
-
-    /* ── показатель, открытый в модальном конструкторе ── */
-    const modalLine = computed(() => {
-      if (modalIndex.value === null) return {};
-      return linesWithMeta.value[modalIndex.value] || {};
-    });
-
-    /* ── drag & drop: порядок показателей ── */
-    const onDragStart = (i, e) => {
-      dragIndex.value = i;
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'move';
-        const card = e.target.closest('.line-card');
-        if (card) e.dataTransfer.setDragImage(card, 20, 20);
-      }
-    };
-    const onDragOver = (i) => { dragOverIndex.value = i; };
-    const onDragEnd  = () => { dragIndex.value = null; dragOverIndex.value = null; };
-    const onDrop = (i) => {
-      const from = dragIndex.value;
-      dragIndex.value = null;
-      dragOverIndex.value = null;
-      if (from === null || from === i || !cfg.value) return;
-      const lines = cfg.value.board.lines;
-      const [moved] = lines.splice(from, 1);
-      lines.splice(i, 0, moved);
-    };
-
-    /* ── модальный конструктор показателя ── */
-    const openLineModal  = (i) => { modalIndex.value = i; };
-    const closeLineModal = () => { modalIndex.value = null; };
-
-    /* ── диалог подтверждения (вместо window.confirm) ── */
-    const askConfirm = (opts) => new Promise((resolve) => {
-      confirmState.value = {
-        title: opts.title || 'Подтверждение',
-        message: opts.message || '',
-        confirmLabel: opts.confirmLabel || 'Подтвердить',
-        danger: opts.danger !== false,
-        resolve,
-      };
-    });
-    const _confirmResolve = (val) => {
-      const st = confirmState.value;
-      confirmState.value = null;
-      if (st) st.resolve(val);
-    };
-    const confirmYes = () => _confirmResolve(true);
-    const confirmNo = () => _confirmResolve(false);
-
-    /* ── конструктор показателей ── */
-    const slugify = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-    const opLabel = (op) => ({ inc: '+', dec: '−', set: '=' }[op] || op);
-    const indStatus = (ind) => (ind.enabled && ind.line_enabled) ? 'displayed' : 'hidden';
-
-    // запросы (event_type), привязанные к каждому показателю
-    const triggersByIndicator = computed(() => {
-      const map = {};
-      for (const ev of (catalog.value?.events || []))
-        for (const m of ev.mappings)
-          (map[m.indicator_key] = map[m.indicator_key] || []).push(
-            { event_type: ev.event_type, op: m.op, checkpoint: m.checkpoint });
-      return map;
-    });
-    // приходящие запросы, не привязанные ни к одному показателю
-    const unmappedRequests = computed(() =>
-      (catalog.value?.events || []).filter(e => e.status === 'unhandled'));
-    const eventTypeList = computed(() =>
-      (catalog.value?.events || []).map(e => e.event_type));
-
-    const loadCatalog = async () => {
-      try {
-        const r = await fetch('/api/event-catalog');
-        catalog.value = await r.json();
-      } catch (e) { toast('err', 'Ошибка каталога: ' + e.message); }
-    };
-    const openEventModal = async () => {
-      eventModalOpen.value = true;
-      catalog.value = null;
-      createForm.value = null;
-      bindForm.value = null;
-      await loadCatalog();
-    };
-    const closeEventModal = () => {
-      eventModalOpen.value = false;
-      createForm.value = null;
-      bindForm.value = null;
-    };
-
-    const refreshAll = async () => {
-      await loadCatalog();
-      await loadConfig();
-      await loadState();
-      if (tab.value === 'overview') await loadPreview();
-    };
-
-    const _post = async (url, body) => {
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        let msg = 'HTTP ' + r.status;
-        try { msg = (await r.json()).message || msg; } catch {}
-        throw new Error(msg);
-      }
-    };
-
-    // создание нового показателя (с необязательной привязкой запроса)
-    const openCreate = (ev) => {
-      createForm.value = {
-        display_name: ev ? ev.event_type : '',
-        key: ev ? slugify(ev.event_type) : '',
-        kind: 'daily',
-        event_type: ev ? ev.event_type : '',
-        checkpoint: ev ? (ev.checkpoint || '') : '',
-        op: 'inc',
-      };
-      bindForm.value = null;
-      editForm.value = null;
-    };
-    const submitCreate = async () => {
-      const f = createForm.value;
-      if (!f) return;
-      savingEvent.value = true;
-      try {
-        const body = { key: f.key, display_name: f.display_name, kind: f.kind };
-        if (f.event_type) body.rule = { event_type: f.event_type, checkpoint: f.checkpoint || null, op: f.op };
-        await _post('/api/indicators', body);
-        toast('ok', 'Показатель создан');
-        createForm.value = null;
-        await refreshAll();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-      finally { savingEvent.value = false; }
-    };
-
-    // редактирование существующего показателя (PATCH /api/indicators/{key})
-    const openEdit = (ind) => {
-      editForm.value = {
-        key: ind.key,
-        display_name: ind.display_name,
-        kind: ind.kind,
-        sort_order: ind.sort_order,
-        enabled: ind.enabled,
-      };
-      createForm.value = null;
-      bindForm.value = null;
-    };
-    const submitEdit = async () => {
-      const f = editForm.value;
-      if (!f || !f.display_name) { toast('err', 'Укажите название'); return; }
-      savingEvent.value = true;
-      try {
-        const r = await fetch('/api/indicators/' + encodeURIComponent(f.key), {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            display_name: f.display_name,
-            kind: f.kind,
-            sort_order: Number(f.sort_order),
-            enabled: f.enabled,
-          }),
-        });
-        if (!r.ok) {
-          let msg = 'HTTP ' + r.status;
-          try { msg = (await r.json()).message || msg; } catch {}
-          throw new Error(msg);
-        }
-        toast('ok', 'Показатель изменён');
-        editForm.value = null;
-        await refreshAll();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-      finally { savingEvent.value = false; }
-    };
-
-    // привязка запроса к показателю — из карточки показателя или из списка запросов
-    const openTrigger = (ind) => {
-      bindForm.value = { indicator_key: ind.key, indicator_locked: true,
-                         event_type: '', event_locked: false, checkpoint: '', op: 'inc' };
-      createForm.value = null;
-      editForm.value = null;
-    };
-    const openBind = (ev) => {
-      bindForm.value = { indicator_key: catalog.value?.indicators[0]?.key || '', indicator_locked: false,
-                         event_type: ev.event_type, event_locked: true, checkpoint: ev.checkpoint || '', op: 'inc' };
-      createForm.value = null;
-      editForm.value = null;
-    };
-    const submitBind = async () => {
-      const f = bindForm.value;
-      if (!f || !f.event_type || !f.indicator_key) { toast('err', 'Укажите показатель и тип запроса'); return; }
-      savingEvent.value = true;
-      try {
-        await _post('/api/event-rules', { event_type: f.event_type, checkpoint: f.checkpoint || null,
-                                          indicator_key: f.indicator_key, op: f.op });
-        toast('ok', 'Запрос привязан');
-        bindForm.value = null;
-        await refreshAll();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-      finally { savingEvent.value = false; }
-    };
-
-    const detachRule = async (event_type, indicator_key) => {
-      try {
-        const url = '/api/event-rules?event_type=' + encodeURIComponent(event_type) +
-                    '&indicator_key=' + encodeURIComponent(indicator_key);
-        const r = await fetch(url, { method: 'DELETE' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        toast('ok', 'Правило отвязано');
-        await refreshAll();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-    };
-
-    const deleteIndicator = async (key, name) => {
-      const ok = await askConfirm({
-        title: 'Удалить показатель',
-        message: 'Показатель «' + name + '» будет удалён вместе с его правилами и историей значений. Действие необратимо.',
-        confirmLabel: 'Удалить',
-        danger: true,
-      });
-      if (!ok) return;
-      try {
-        const r = await fetch('/api/indicators/' + encodeURIComponent(key), { method: 'DELETE' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        toast('ok', 'Показатель удалён');
-        await refreshAll();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-    };
-
-    const dismissEvent = async (event_type) => {
-      try {
-        const r = await fetch('/api/event-catalog/' + encodeURIComponent(event_type), { method: 'DELETE' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        await loadCatalog();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-    };
-
-    const onKeydown = (e) => {
-      if (e.key !== 'Escape') return;
-      if (confirmState.value) confirmNo();
-      else if (modalIndex.value !== null) closeLineModal();
-      else if (eventModalOpen.value) closeEventModal();
-    };
-
-    /* ── API calls ── */
-    const loadConfig = async () => {
-      try {
-        const r = await fetch('/api/display/config');
-        cfg.value = await r.json();
-        // Эталон = конфигурация, сохранённая на сервере
-        baseline = JSON.stringify(cfg.value.board);
-        // Восстанавливаем несохранённый черновик, если он отличается от серверного
-        const draft = LS.get(DRAFT_KEY);
-        if (draft && JSON.stringify(draft) !== baseline) {
-          cfg.value.board = draft;
-          hasDraft.value = true;
-          toast('ok', 'Восстановлен черновик несохранённых правок');
-        } else {
-          LS.remove(DRAFT_KEY);
-          hasDraft.value = false;
-        }
-      } catch (e) { toast('err', 'Ошибка загрузки конфига: ' + e.message); }
-    };
-
-    /* Откатить черновик к сохранённой на сервере конфигурации */
-    const discardDraft = () => {
-      if (!cfg.value || baseline === null) return;
-      cfg.value.board = JSON.parse(baseline);
-      LS.remove(DRAFT_KEY);
-      hasDraft.value = false;
-      toast('ok', 'Черновик сброшен');
-    };
-
-    const loadState = async () => {
-      try {
-        const r = await fetch('/api/state');
-        stateData.value = await r.json();
-      } catch { /* silent */ }
-    };
-
-    const loadStatus = async () => {
-      try {
-        const r = await fetch('/api/tablo/status');
-        status.value = await r.json();
-      } catch { /* silent */ }
-    };
-
-    const loadPushLog = async () => {
-      try {
-        const r = await fetch('/api/tablo/push-log');
-        pushLog.value = await r.json();
-      } catch { /* silent */ }
-    };
-
-    const loadPreview = async () => {
-      try {
-        const r = await fetch('/api/display/preview');
-        const p = await r.json();
-        await nextTick();
-        drawCanvas(p);
-      } catch (e) { toast('err', 'Ошибка превью: ' + e.message); }
-    };
-
-    const save = async () => {
-      if (!cfg.value) return;
-      saving.value = true;
-      try {
-        const r = await fetch('/api/display/config', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cfg.value.board),
-        });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const data = await r.json();
-        cfg.value.board = data.board;
-        // Сохранено на сервере → черновик больше не нужен
-        baseline = JSON.stringify(data.board);
-        LS.remove(DRAFT_KEY);
-        hasDraft.value = false;
-        toast('ok', 'Настройки сохранены');
-        if (tab.value === 'overview') await loadPreview();
-      } catch (e) { toast('err', 'Ошибка сохранения: ' + e.message); }
-      finally { saving.value = false; }
-    };
-
-    const pushNow = async () => {
-      pushing.value = true;
-      try {
-        const r = await fetch('/api/display/push', { method: 'POST' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        toast('ok', 'Отправлено на табло');
-        await loadStatus();
-      } catch (e) { toast('err', 'Ошибка отправки: ' + e.message); }
-      finally { pushing.value = false; }
-    };
-
-    const saveAndPush = async () => {
-      await save();
-      await pushNow();
-    };
-
-    const clearBoard = async () => {
-      clearing.value = true;
-      try {
-        const r = await fetch('/api/display/clear', { method: 'POST' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        toast('ok', 'Экран очищен');
-      } catch (e) { toast('err', 'Ошибка очистки: ' + e.message); }
-      finally { clearing.value = false; }
-    };
-
-    const reconnect = async () => {
-      try {
-        await fetch('/api/tablo/reconnect', { method: 'POST' });
-        await loadStatus();
-        toast('ok', 'Команда переподключения отправлена');
-      } catch (e) { toast('err', 'Ошибка переподключения: ' + e.message); }
-    };
-
-    /* ── Color helpers: 0xAARRGGBB <-> #RRGGBB ── */
-    const argbToHex = (argb) => {
-      const m = /^0x[0-9a-f]{2}([0-9a-f]{6})$/i.exec(argb || '');
-      return m ? '#' + m[1] : '#ffffff';
-    };
-    const hexToArgb = (hex, current) => {
-      const am = /^0x([0-9a-f]{2})/i.exec(current || '');
-      const alpha = am ? am[1] : 'ff';
-      return '0x' + alpha + hex.replace('#', '').toLowerCase();
-    };
-
-    /* ── Manual adjust ── */
-    const adjust = async (key, delta) => {
-      try {
-        const r = await fetch('/api/state/adjust', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key, delta }),
-        });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const data = await r.json();
-        if (stateData.value) {
-          const ind = stateData.value.indicators.find(i => i.key === key);
-          if (ind) ind.value = data.value;
-        }
-      } catch (e) { toast('err', 'Ошибка корректировки: ' + e.message); }
-    };
-
-    /* ── Screen brightness ── */
-    const setBrightness = async (val) => {
-      try {
-        await fetch('/api/tablo/brightness', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value: val }),
-        });
-      } catch { /* silent */ }
-    };
-
-    /* ── Threshold helper ── */
-    const setThreshold = (i, field, val) => {
-      const ln = cfg.value.board.lines[i];
-      if (!ln.threshold) ln.threshold = { value: null, op: '>=', color: '0xffff0000', target: 'line', duration_seconds: 0 };
-      if (field === 'value') {
-        ln.threshold.value = val === '' ? null : Number(val);
-      } else {
-        ln.threshold[field] = val;
-      }
-      if (ln.threshold.value === null) ln.threshold = null;
-    };
-
-    /* ── Canvas drawing ── */
-    function argbToCss(s) {
-      const m = /^0x[0-9a-fA-F]{2}([0-9a-fA-F]{6})$/.exec(s || '');
-      return m ? '#' + m[1] : '#ffffff';
-    }
-
-    function drawCanvas(p) {
-      const c = cvs.value;
-      if (!c) return;
-      const ctx = c.getContext('2d');
-      const dev = cfg.value?.device || {};
-      const bw = dev.width  || 256;
-      const bh = dev.height || 96;
-
-      // 1. Рендер при нативном разрешении матрицы (256×96).
-      //    Размер шрифта совпадает с реальным, текст ведёт себя как на устройстве.
-      const nat = document.createElement('canvas');
-      nat.width = bw; nat.height = bh;
-      const nc = nat.getContext('2d');
-
-      nc.fillStyle = '#080604';
-      nc.fillRect(0, 0, bw, bh);
-
-      // Рамка области шире текста (шрифт панели крупнее экранного), поэтому в
-      // превью прижимаем текст к краю области так же, как на панели: метки —
-      // влево, значения — вправо. Иначе текст «гулял» бы по центру рамки.
-      (p.areas || []).forEach(a => {
-        const x = +a.x, y = +a.y, w = +a.w, h = +a.h;
-        nc.fillStyle = argbToCss(a.fontcolor);
-        nc.font = `${Math.max(4, +a.fontsize)}px ${a.fontname || 'Arial'}`;
-        nc.textBaseline = 'middle';
-        const align = a.align || 'left';
-        let tx;
-        if (align === 'right')       { nc.textAlign = 'right';  tx = x + w; }
-        else if (align === 'center') { nc.textAlign = 'center'; tx = x + w / 2; }
-        else                         { nc.textAlign = 'left';   tx = x; }
-        nc.save();
-        nc.beginPath(); nc.rect(x, y, w, h); nc.clip();
-        nc.fillText(a.msg, tx, y + h / 2);
-        nc.restore();
-      });
-
-      // 2. Масштабирование без сглаживания → каждый пиксель = блок LEDʼа
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(nat, 0, 0, c.width, c.height);
-
-      // 3. Сетка-разделитель между "пикселями" (корпус LED-матрицы)
-      const sx = c.width / bw, sy = c.height / bh;
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      for (let xi = 0; xi < bw; xi++) ctx.fillRect(Math.round(xi * sx + sx - 1), 0, 1, c.height);
-      for (let yi = 0; yi < bh; yi++) ctx.fillRect(0, Math.round(yi * sy + sy - 1), c.width, 1);
-    }
-
-    /* ── watch tab to draw canvas when switching to overview ── */
-    watch(tab, async (val) => {
-      if (val === 'overview') {
-        await nextTick();
-        await loadPreview();
-      }
-      if (val === 'connection') {
-        await loadPushLog();
-      }
-    });
-
-    /* ── Сохранение состояния UI редактора между сессиями ── */
-    watch([mini, devOpen, repOpen, tab, adjustStep], () => {
-      LS.set(UI_KEY, {
-        mini: mini.value,
-        devOpen: devOpen.value,
-        repOpen: repOpen.value,
-        tab: tab.value,
-        adjustStep: adjustStep.value,
-      });
-    });
-
-    /* ── Сохранение черновика несохранённых правок табло ── */
-    watch(() => cfg.value && cfg.value.board, (board) => {
-      if (!board || baseline === null) return;
-      if (JSON.stringify(board) === baseline) {
-        // Правки совпали с сохранённой версией → черновик не нужен
-        LS.remove(DRAFT_KEY);
-        hasDraft.value = false;
-      } else {
-        LS.set(DRAFT_KEY, board);
-        hasDraft.value = true;
-      }
-    }, { deep: true });
-
-    /* ── toasts ── */
-    const toasts = ref([]);
-    let _tid = 0;
-    const toast = (cls, msg, ms = 3500) => {
-      const id = ++_tid;
-      const icon = cls === 'ok' ? 'check_circle' : 'error';
-      toasts.value.push({ id, cls, icon, msg });
-      setTimeout(() => {
-        const i = toasts.value.findIndex(t => t.id === id);
-        if (i !== -1) toasts.value.splice(i, 1);
-      }, ms);
-    };
-
-    /* ── lifecycle ── */
-    let t1, t2;
-    onMounted(async () => {
-      window.addEventListener('keydown', onKeydown);
-      await Promise.all([loadConfig(), loadState(), loadStatus()]);
-      await loadPreview();
-      t1 = setInterval(loadState,  10_000);
-      t2 = setInterval(loadStatus, 10_000);
-    });
-    onUnmounted(() => {
-      clearInterval(t1); clearInterval(t2);
-      window.removeEventListener('keydown', onKeydown);
-    });
-
-    return {
-      mini, devOpen, repOpen,
-      topNav, devNav, repNav, bottomNav,
-      tab, cfg, stateData, status, pushLog,
-      saving, pushing, clearing, adjustStep, cvs,
-      hasDraft, discardDraft,
-      dragIndex, dragOverIndex, modalIndex, modalLine,
-      onDragStart, onDragOver, onDragEnd, onDrop,
-      openLineModal, closeLineModal,
-      eventModalOpen, catalog, savingEvent, createForm, editForm, bindForm,
-      confirmState, confirmYes, confirmNo,
-      opLabel, indStatus, triggersByIndicator, unmappedRequests, eventTypeList,
-      openEventModal, closeEventModal, loadCatalog,
-      openCreate, submitCreate, openEdit, submitEdit, openTrigger, openBind, submitBind,
-      detachRule, deleteIndicator, dismissEvent,
-      connDot, connLabel, statusDetail, lastPushLine, deviceLabel,
-      linesWithMeta,
-      loadConfig, loadState, loadStatus, loadPreview, loadPushLog,
-      save, pushNow, saveAndPush, clearBoard, reconnect,
-      adjust, setBrightness,
-      argbToHex, hexToArgb,
-      setThreshold,
-      toasts,
-    };
-  },
-}).mount('#q-app');
-</script>
+<script src="/ui/app.js"></script>
 </body>
 </html>

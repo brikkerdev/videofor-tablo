@@ -165,6 +165,17 @@ class TabloClient:
             await asyncio.sleep(0.5)
         return self.connected
 
+    async def reconfigure(self, url: str, token: str, matrix_ip: str, matrix_pass: str) -> None:
+        await self._stop_sse()
+        self.base_url = url.rstrip("/")
+        self.token = token
+        self.matrix_ip = matrix_ip
+        self.matrix_pass = matrix_pass
+        self._warned_no_url = False
+        self.device = None
+        self._stop = False
+        self.start()
+
     async def push_areas(self, areas: list[dict]) -> None:
         if not self.base_url:
             if not self._warned_no_url:
