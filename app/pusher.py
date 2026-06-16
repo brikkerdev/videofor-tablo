@@ -1,9 +1,12 @@
 import asyncio
 import logging
+from collections import deque
+from datetime import datetime
 
 from .db import Database
 from .models import BoardConfig
 from .render import BOARD_H, BOARD_W, render_areas
+from .render import _alert
 from .state import StateCache
 from .tablo import TabloClient
 
@@ -11,6 +14,7 @@ logger = logging.getLogger("app.pusher")
 
 TICK_SECONDS = 30
 MIN_PUSH_INTERVAL = 2.0
+PUSH_LOG_SIZE = 50
 
 
 class Pusher:
@@ -37,6 +41,8 @@ class Pusher:
         self.last_ok: bool | None = None
         self.last_error: str = ""
         self.last_push_at = None
+        self._threshold_since: dict[str, datetime] = {}
+        self.push_log: deque = deque(maxlen=PUSH_LOG_SIZE)
 
     def mark_dirty(self) -> None:
         self.paused = False
@@ -61,15 +67,28 @@ class Pusher:
             if self.paused:
                 continue
             self.state.rollover_if_needed()
+            now = self.state.now()
             online = self.state.is_online(self.board.online_window_seconds)
+
+            for ln in self.board.lines:
+                if ln.threshold is None:
+                    self._threshold_since.pop(ln.key, None)
+                    continue
+                val = self.state.values.get(ln.key, 0)
+                if _alert(ln.threshold, val):
+                    self._threshold_since.setdefault(ln.key, now)
+                else:
+                    self._threshold_since.pop(ln.key, None)
+
             areas = render_areas(
                 self.state.indicators,
                 self.state.values,
                 self.board,
-                self.state.now(),
+                now,
                 online,
                 self.width,
                 self.height,
+                threshold_since=self._threshold_since,
             )
             try:
                 await self.tablo.push_areas(areas)
@@ -77,12 +96,14 @@ class Pusher:
                 self._last_push_t = asyncio.get_running_loop().time()
                 self.last_ok = True
                 self.last_error = ""
-                self.last_push_at = self.state.now()
+                self.last_push_at = now
+                self.push_log.appendleft({"at": now.strftime("%H:%M:%S"), "ok": True, "error": ""})
                 logger.info("Состояние доставлено на табло (%d областей)", len(areas))
             except Exception as exc:
                 self.last_ok = False
                 self.last_error = str(exc)
-                self.last_push_at = self.state.now()
+                self.last_push_at = now
+                self.push_log.appendleft({"at": now.strftime("%H:%M:%S"), "ok": False, "error": str(exc)})
                 logger.warning("Push на табло не удался: %s", exc)
                 self._dirty.set()
                 await asyncio.sleep(self.retry_seconds)

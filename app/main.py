@@ -303,6 +303,12 @@ async def reconnect_tablo(request: Request):
     return {"status": "ok"}
 
 
+@app.get("/api/tablo/push-log")
+async def get_push_log(request: Request):
+    pusher: Pusher = request.app.state.pusher
+    return list(pusher.push_log)
+
+
 class BrightnessIn(BaseModel):
     value: int = Field(ge=0, le=255)
 

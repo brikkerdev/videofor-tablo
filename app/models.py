@@ -35,6 +35,7 @@ class Threshold(BaseModel):
     op: str = ">="
     color: str = "0xffff0000"
     target: str = "line"
+    delay_seconds: int = 0
 
 
 class LineConfig(BaseModel):
@@ -42,7 +43,6 @@ class LineConfig(BaseModel):
     enabled: bool = True
     color: str = "0xffffffff"
     brightness: int = Field(default=255, ge=0, le=255)
-    smooth: bool = False
     threshold: Threshold | None = None
 
 
@@ -50,6 +50,7 @@ class BoardConfig(BaseModel):
     top_panel: TopPanel = Field(default_factory=TopPanel)
     lines: list[LineConfig] = Field(default_factory=list)
     columns: int = 1
+    align: str = "left"
     padding: int = Field(default=3, ge=0, le=40)
     fontname: str = "Arial"
     fontsize: int = 16

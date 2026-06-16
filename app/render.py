@@ -93,58 +93,20 @@ def _effective_brightness(base: int, item: int) -> int:
     return min(255, int(base * item / 255))
 
 
-def _lerp(a: tuple, b: tuple, t: float) -> tuple:
-    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
-
-
-def _parse_rgb(color: str) -> tuple:
-    m = re.match(r'^0x[0-9a-fA-F]{2}([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$', color or '')
-    if m:
-        return int(m.group(1), 16), int(m.group(2), 16), int(m.group(3), 16)
-    return (255, 255, 255)
-
-
-def _gradient_color(value: int, threshold_val: int, op: str, eff_brightness: int, base_color: str = "0xffffffff") -> str:
-    GOOD   = _parse_rgb(base_color)
-    YELLOW = (255, 200,   0)
-    ORANGE = (255, 100,   0)
-    RED    = (255,   0,   0)
-
-    t = max(1, threshold_val)
-    pct = max(0.0, value / t)
-
-    above_is_bad = op in (">=", ">")
-
-    if above_is_bad:
-        kp = [(0.0, GOOD), (0.25, GOOD), (0.5, YELLOW), (0.75, ORANGE), (1.0, RED)]
-    else:
-        kp = [(0.0, RED), (0.25, ORANGE), (0.5, YELLOW), (0.75, GOOD), (1.0, GOOD)]
-
-    pct = min(pct, kp[-1][0])
-
-    r, g, b = kp[-1][1]
-    for i in range(len(kp) - 1):
-        p0, c0 = kp[i]
-        p1, c1 = kp[i + 1]
-        if pct <= p1:
-            f = (pct - p0) / (p1 - p0) if p1 > p0 else 1.0
-            r, g, b = _lerp(c0, c1, f)
-            break
-
-    return f'0x{eff_brightness:02x}{r:02x}{g:02x}{b:02x}'
-
-
-def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h, base_brightness: int = 255) -> list[dict]:
+def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h,
+                base_brightness: int = 255, threshold_since=None, now=None) -> list[dict]:
     th = ln.threshold
     label = f"{ind.display_name}:"
     value = str(val)
 
     eff = _effective_brightness(base_brightness, ln.brightness)
-    if ln.smooth and th is not None:
-        label_color = value_color = _gradient_color(val, th.value, th.op, eff, ln.color)
-    else:
-        label_color = value_color = _with_brightness(ln.color, eff)
-        if _alert(th, val) and th is not None:
+    label_color = value_color = _with_brightness(ln.color, eff)
+
+    if th is not None and _alert(th, val):
+        delay = th.delay_seconds or 0
+        since = (threshold_since or {}).get(ind.key)
+        elapsed = (now - since).total_seconds() if (since and now) else 0
+        if delay == 0 or elapsed >= delay:
             value_color = _with_brightness(th.color, eff)
             if th.target == "line":
                 label_color = value_color
@@ -175,6 +137,7 @@ def render_areas(
     online: bool,
     width: int = BOARD_W,
     height: int = BOARD_H,
+    threshold_since: dict | None = None,
 ) -> list[dict]:
     areas: list[dict] = []
 
@@ -224,7 +187,9 @@ def render_areas(
             areas.extend(
                 _line_areas(ind, val, ln, c * col_w, col_w, board, fs,
                             top_h + r * line_h, line_h,
-                            base_brightness=board.screen_brightness)
+                            base_brightness=board.screen_brightness,
+                            threshold_since=threshold_since,
+                            now=now)
             )
 
     out: list[dict] = []

@@ -13,11 +13,13 @@
 <body class="overflow-hidden desktop no-touch body--light">
 <div id="q-app" class="tw-h-screen tw-flex">
 
+  
   <aside class="q-drawer q-drawer--left q-drawer--bordered q-drawer--standard"
          :class="{ mini }" :style="{ width: mini ? '56px' : '300px' }">
     <div class="q-drawer__content fit scroll tw-font-medium">
       <div class="q-list full-height tw-flex tw-flex-col tw-overflow-hidden">
 
+        
         <div class="row full-width justify-around tw-gap-4 items-center tw-h-14">
           <div class="q-img q-img--menu hide-collapsed" style="width:120px;visibility:hidden">
             <div style="padding-bottom:31.5%"></div>
@@ -44,6 +46,7 @@
 
           <hr class="q-separator q-separator--horizontal q-separator--horizontal-inset" style="margin:8px 0">
 
+          
           <div class="q-expansion-item q-item-type q-expansion-item--standard"
                :class="devOpen ? 'q-expansion-item--expanded' : 'q-expansion-item--collapsed'">
             <div class="q-expansion-item__container relative-position">
@@ -72,6 +75,7 @@
             </div>
           </div>
 
+          
           <div class="q-expansion-item q-item-type q-expansion-item--standard"
                :class="repOpen ? 'q-expansion-item--expanded' : 'q-expansion-item--collapsed'">
             <div class="q-expansion-item__container relative-position">
@@ -111,6 +115,7 @@
           </a>
         </div>
 
+        
         <div class="tw-mt-auto">
           <hr class="q-separator q-separator--horizontal q-separator--horizontal-inset">
           <div class="row items-center justify-between q-py-sm tw-gap-2 q-px-lg">
@@ -134,9 +139,11 @@
     </div>
   </aside>
 
+  
   <div class="q-page-container" :style="{ paddingLeft: mini ? '56px' : '300px' }" style="flex:1">
     <main class="q-page q-layout-padding column">
 
+      
       <div class="row justify-between items-center full-width q-mb-md">
         <span class="text-h5 text-bold">Информационные табло</span>
         <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
@@ -158,15 +165,16 @@
         </button>
       </div>
 
+      
       <div class="q-card q-mb-md" style="border-radius:4px">
         <div class="q-card__section q-card__section--vert row items-center" style="gap:20px;flex-wrap:wrap;padding:12px 16px">
           <div style="flex:1;min-width:220px">
             <div class="row items-center" style="gap:8px;margin-bottom:4px">
               <span class="dot" :class="connDot"></span>
               <span style="font-size:14px;font-weight:500">{{ connLabel }}</span>
-              <span v-if="status" style="font-size:12px;color:#9e9e9e">{{ statusDetail }}</span>
+              
             </div>
-            <div style="font-size:12px;color:#9e9e9e" v-if="lastPushLine">{{ lastPushLine }}</div>
+            
           </div>
           <div class="row" style="gap:8px;flex-shrink:0">
             <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
@@ -178,26 +186,21 @@
                 Обновить
               </span>
             </button>
-            <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                    style="border:1px solid #757575;color:#757575;background:transparent"
-                    @click="reconnect" type="button">
-              <span class="q-focus-helper" tabindex="-1"></span>
-              <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:4px">
-                <i class="q-icon notranslate material-icons" style="font-size:16px">settings_ethernet</i>
-                Переподключить
-              </span>
-            </button>
           </div>
         </div>
       </div>
 
+      
       <div class="my-tabs">
         <div class="my-tab" :class="{ active: tab==='overview' }" @click="tab='overview'">Обзор</div>
         <div class="my-tab" :class="{ active: tab==='settings' }" @click="tab='settings'">Настройка вывода</div>
+        <div class="my-tab" :class="{ active: tab==='connection' }" @click="tab='connection'">Подключение</div>
       </div>
 
+      
       <template v-if="tab==='overview'">
 
+        
         <div class="row q-col-gutter-md q-mb-md" v-if="stateData">
           <div class="col-12 col-sm-4" v-for="ind in stateData.indicators" :key="ind.key">
             <div class="q-card" style="border-radius:4px">
@@ -216,6 +219,7 @@
           </div>
         </div>
 
+        
         <div class="q-card" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div class="row items-center justify-between q-mb-md">
@@ -242,8 +246,10 @@
 
       </template>
 
+      
       <template v-if="tab==='settings' && cfg">
 
+        
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
@@ -295,6 +301,7 @@
           </div>
         </div>
 
+        
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
@@ -312,8 +319,6 @@
                 <option :value="1">1</option>
                 <option :value="2">2</option>
               </select>
-              <span style="font-size:13px;color:#757575;margin-left:12px">Окно онлайн, сек</span>
-              <input type="number" class="form-input" v-model.number="cfg.board.online_window_seconds" min="10">
             </div>
             <div class="form-row">
               <span class="form-label">Шрифт</span>
@@ -326,87 +331,66 @@
           </div>
         </div>
 
+        
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
-            <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
-              Показатели
+            <div class="row items-center justify-between q-mb-md">
+              <div class="row items-center" style="gap:12px">
+                <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px">
+                  Показатели
+                </div>
+                <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                        style="border:1px solid var(--q-primary);color:var(--q-primary);background:transparent"
+                        @click="openEventModal" type="button">
+                  <span class="q-focus-helper" tabindex="-1"></span>
+                  <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:5px">
+                    <i class="q-icon notranslate material-icons" style="font-size:16px">insights</i>
+                    Конструктор показателей
+                  </span>
+                </button>
+              </div>
+              <span style="font-size:12px;color:#9e9e9e;display:flex;align-items:center;gap:4px">
+                <i class="q-icon notranslate material-icons" style="font-size:15px">drag_indicator</i>
+                Перетащите для изменения порядка
+              </span>
             </div>
-            <div style="overflow-x:auto">
-              <table class="lines-table">
-                <thead>
-                  <tr>
-                    <th>Показывать</th>
-                    <th>Показатель</th>
-                    <th>Цвет</th>
-                    <th>Яркость</th>
-                    <th>Порог</th>
-                    <th>Условие</th>
-                    <th>Цвет порога</th>
-                    <th>Красить</th>
-                    <th title="Плавный градиент: красный→оранжевый→зелёный относительно порога">Плавное</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(ln, i) in linesWithMeta" :key="ln.key">
-                    <td><input type="checkbox" class="form-input" v-model="cfg.board.lines[i].enabled"></td>
-                    <td style="font-weight:500">{{ ln.display_name }}</td>
-                    <td>
-                      <div style="display:flex;gap:4px;align-items:center">
-                        <input class="form-input" v-model="cfg.board.lines[i].color" list="colors" style="width:11em">
-                        <input type="color" class="color-pick"
-                               :value="argbToHex(cfg.board.lines[i].color)"
-                               @input="cfg.board.lines[i].color = hexToArgb($event.target.value, cfg.board.lines[i].color)">
-                      </div>
-                    </td>
-                    <td>
-                      <input type="number" class="form-input" v-model.number="cfg.board.lines[i].brightness" min="0" max="255" style="width:4.5em">
-                    </td>
-                    <td>
-                      <input type="number" class="form-input"
-                             :value="cfg.board.lines[i].threshold?.value ?? ''"
-                             @input="setThreshold(i,'value',$event.target.value)"
-                             placeholder="—">
-                    </td>
-                    <td>
-                      <select class="form-input"
-                              :value="cfg.board.lines[i].threshold?.op ?? '>='"
-                              @change="setThreshold(i,'op',$event.target.value)">
-                        <option>>=</option><option>></option>
-                        <option><=</option><option><</option>
-                        <option>==</option>
-                      </select>
-                    </td>
-                    <td>
-                      <div style="display:flex;gap:4px;align-items:center">
-                        <input class="form-input"
-                               :value="cfg.board.lines[i].threshold?.color ?? '0xffff0000'"
-                               @input="setThreshold(i,'color',$event.target.value)"
-                               list="colors" style="width:11em">
-                        <input type="color" class="color-pick"
-                               :value="argbToHex(cfg.board.lines[i].threshold?.color ?? '0xffff0000')"
-                               @input="setThreshold(i,'color',$event.target.value.replace('#','0xff'))">
-                      </div>
-                    </td>
-                    <td>
-                      <select class="form-input"
-                              :value="cfg.board.lines[i].threshold?.target ?? 'line'"
-                              @change="setThreshold(i,'target',$event.target.value)">
-                        <option value="line">строку</option>
-                        <option value="value">число</option>
-                      </select>
-                    </td>
-                    <td style="text-align:center">
-                      <input type="checkbox" class="form-input"
-                             v-model="cfg.board.lines[i].smooth"
-                             :title="cfg.board.lines[i].smooth ? 'Градиент активен — цвет строки и цвет порога игнорируются' : 'Включить плавный градиент цвета'">
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="line-cards"
+                 :style="{ gridTemplateColumns: 'repeat(' + (Number(cfg.board.columns) === 2 ? 2 : 1) + ', minmax(0, 1fr))' }">
+              <div v-for="(ln, i) in linesWithMeta" :key="ln.key"
+                   class="line-card"
+                   :class="{ dragging: dragIndex===i, 'drag-over': dragOverIndex===i && dragIndex!==null && dragIndex!==i, disabled: !cfg.board.lines[i].enabled }"
+                   @dragover.prevent="onDragOver(i)" @dragenter.prevent @drop="onDrop(i)">
+                <span class="drag-handle material-icons" draggable="true"
+                      @dragstart="onDragStart(i, $event)" @dragend="onDragEnd"
+                      title="Перетащить">drag_indicator</span>
+                <span class="line-card__title">{{ ln.display_name }}</span>
+
+                
+                <label class="line-card__quick" style="cursor:pointer">
+                  <input type="checkbox" class="form-input" v-model="cfg.board.lines[i].enabled">
+                  Показывать
+                </label>
+                <div class="line-card__quick">
+                  <span style="color:#757575">Цвет</span>
+                  <input type="color" class="color-pick"
+                         :value="argbToHex(cfg.board.lines[i].color)"
+                         @input="cfg.board.lines[i].color = hexToArgb($event.target.value, cfg.board.lines[i].color)">
+                  <input class="form-input" v-model="cfg.board.lines[i].color" list="colors" style="width:9em">
+                </div>
+                <span class="th-badge" v-if="cfg.board.lines[i].threshold">
+                  <i class="q-icon notranslate material-icons" style="font-size:13px">warning_amber</i>
+                  порог {{ cfg.board.lines[i].threshold.op }} {{ cfg.board.lines[i].threshold.value }}
+                </span>
+
+                <button class="icon-btn" @click="openLineModal(i)" title="Настроить показатель" type="button">
+                  <i class="q-icon notranslate material-icons" style="font-size:20px">tune</i>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
+        
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
@@ -424,6 +408,7 @@
           </div>
         </div>
 
+        
         <div class="row" style="gap:12px;margin-bottom:24px">
           <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
                   :disabled="saving" @click="save" type="button">
@@ -442,13 +427,407 @@
               Сохранить и применить
             </span>
           </button>
+          <button v-if="hasDraft"
+                  class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                  style="border:1px solid #757575;color:#757575;background:transparent"
+                  @click="discardDraft" type="button">
+            <span class="q-focus-helper" tabindex="-1"></span>
+            <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+              <i class="q-icon notranslate material-icons" style="font-size:16px">undo</i>
+              Сбросить черновик
+            </span>
+          </button>
+          <span v-if="hasDraft" class="row items-center" style="gap:4px;font-size:12px;color:#f2c037">
+            <i class="q-icon notranslate material-icons" style="font-size:16px">edit_note</i>
+            Есть несохранённые изменения
+          </span>
         </div>
 
+      </template>
+
+      <template v-if="tab==='connection'">
+        <div class="q-card q-mb-md" style="border-radius:4px">
+          <div class="q-card__section q-card__section--vert">
+            <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
+              Подключение к шлюзу
+            </div>
+            <div class="form-row">
+              <span class="form-label">URL шлюза</span>
+              <span style="font-size:13px">{{ status?.url || '—' }}</span>
+            </div>
+            <div class="form-row">
+              <span class="form-label">Матрица</span>
+              <span style="font-size:13px">{{ status?.device ? (status.device.width + '×' + status.device.height + ' px') : '—' }}</span>
+            </div>
+            <div class="form-row">
+              <span class="form-label">Яркость устройства</span>
+              <span style="font-size:13px">{{ status?.device?.brightness ?? '—' }}</span>
+            </div>
+            <div style="font-size:12px;color:#9e9e9e;margin-top:8px">
+              Параметры подключения настраиваются через переменные окружения: TABLO_URL, TABLO_TOKEN, TABLO_MATRIX_IP.
+            </div>
+            <div class="row" style="gap:8px;margin-top:16px">
+              <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                      style="border:1px solid var(--q-primary);color:var(--q-primary);background:transparent"
+                      @click="loadStatus" type="button">
+                <span class="q-focus-helper" tabindex="-1"></span>
+                <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:4px">
+                  <i class="q-icon notranslate material-icons" style="font-size:16px">refresh</i>
+                  Обновить статус
+                </span>
+              </button>
+              <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                      style="border:1px solid #757575;color:#757575;background:transparent"
+                      @click="reconnect" type="button">
+                <span class="q-focus-helper" tabindex="-1"></span>
+                <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:4px">
+                  <i class="q-icon notranslate material-icons" style="font-size:16px">settings_ethernet</i>
+                  Переподключить
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="q-card" style="border-radius:4px">
+          <div class="q-card__section q-card__section--vert">
+            <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
+              Журнал доставки
+            </div>
+            <div v-if="!pushLog.length" style="font-size:13px;color:#9e9e9e">Нет записей</div>
+            <div v-for="entry in pushLog" :key="entry.at" style="font-size:13px;padding:4px 0;border-bottom:1px solid #f5f5f5;display:flex;gap:12px;align-items:flex-start">
+              <span style="font-family:monospace;color:#9e9e9e;flex-shrink:0">{{ entry.at }}</span>
+              <span :style="{ color: entry.ok ? '#388e3c' : '#c62828' }">{{ entry.ok ? 'OK' : 'ОШИБКА' }}</span>
+              <span v-if="!entry.ok" style="color:#424242">{{ entry.error }}</span>
+            </div>
+          </div>
+        </div>
       </template>
 
     </main>
   </div>
 
+  
+  <div class="modal-backdrop" v-if="modalIndex !== null && cfg" @click.self="closeLineModal">
+    <div class="modal">
+      <div class="modal__head">
+        <span class="modal__title">Настройка показателя — {{ modalLine.display_name }}</span>
+        <button class="icon-btn" @click="closeLineModal" title="Закрыть" type="button">
+          <i class="q-icon notranslate material-icons">close</i>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div class="modal__section-title">Основное</div>
+        <div class="form-row">
+          <label class="form-label" style="cursor:pointer">
+            <input type="checkbox" class="form-input" v-model="cfg.board.lines[modalIndex].enabled">
+            Показывать на табло
+          </label>
+        </div>
+        <div class="form-row">
+          <span class="form-label">Цвет</span>
+          <input class="form-input" v-model="cfg.board.lines[modalIndex].color" list="colors" style="width:12em">
+          <input type="color" class="color-pick"
+                 :value="argbToHex(cfg.board.lines[modalIndex].color)"
+                 @input="cfg.board.lines[modalIndex].color = hexToArgb($event.target.value, cfg.board.lines[modalIndex].color)">
+        </div>
+        <div class="form-row">
+          <span class="form-label">Яркость</span>
+          <input type="range" min="0" max="255" step="1"
+                 v-model.number="cfg.board.lines[modalIndex].brightness" style="width:160px;cursor:pointer">
+          <input type="number" class="form-input" v-model.number="cfg.board.lines[modalIndex].brightness"
+                 min="0" max="255" style="width:4.5em">
+        </div>
+
+        <div class="modal__section-title">Порог</div>
+        <div class="form-row">
+          <span class="form-label">Значение</span>
+          <input type="number" class="form-input"
+                 :value="cfg.board.lines[modalIndex].threshold?.value ?? ''"
+                 @input="setThreshold(modalIndex,'value',$event.target.value)"
+                 placeholder="нет порога">
+          <select class="form-input"
+                  :value="cfg.board.lines[modalIndex].threshold?.op ?? '>='"
+                  @change="setThreshold(modalIndex,'op',$event.target.value)">
+            <option>>=</option><option>></option>
+            <option><=</option><option><</option>
+            <option>==</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <span class="form-label">Цвет порога</span>
+          <input class="form-input"
+                 :value="cfg.board.lines[modalIndex].threshold?.color ?? '0xffff0000'"
+                 @input="setThreshold(modalIndex,'color',$event.target.value)"
+                 list="colors" style="width:12em">
+          <input type="color" class="color-pick"
+                 :value="argbToHex(cfg.board.lines[modalIndex].threshold?.color ?? '0xffff0000')"
+                 @input="setThreshold(modalIndex,'color',$event.target.value.replace('#','0xff'))">
+        </div>
+        <div class="form-row">
+          <span class="form-label">Красить</span>
+          <select class="form-input"
+                  :value="cfg.board.lines[modalIndex].threshold?.target ?? 'line'"
+                  @change="setThreshold(modalIndex,'target',$event.target.value)">
+            <option value="line">строку</option>
+            <option value="value">число</option>
+          </select>
+        </div>
+      </div>
+              <div class="form-row">
+          <span class="form-label">Задержка, сек</span>
+          <input type="number" class="form-input"
+                 :value="cfg.board.lines[modalIndex].threshold?.delay_seconds ?? 0"
+                 @input="setThreshold(modalIndex,'delay_seconds',+$event.target.value)"
+                 min="0" max="3600" style="width:5em"
+                 title="Цвет порога применяется только если условие выполняется непрерывно N секунд">
+          <span style="font-size:12px;color:#9e9e9e">0 = сразу</span>
+        </div>
+      <div class="modal__foot">
+        <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                @click="closeLineModal" type="button">
+          <span class="q-focus-helper" tabindex="-1"></span>
+          <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+            <i class="q-icon notranslate material-icons" style="font-size:16px">check</i>
+            Готово
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="modal-backdrop" v-if="eventModalOpen" @click.self="closeEventModal">
+    <div class="modal modal--wide">
+      <div class="modal__head">
+        <span class="modal__title">Конструктор показателей</span>
+        <div class="row items-center" style="gap:4px">
+          <button class="icon-btn" @click="loadCatalog" title="Обновить" type="button">
+            <i class="q-icon notranslate material-icons">refresh</i>
+          </button>
+          <button class="icon-btn" @click="closeEventModal" title="Закрыть" type="button">
+            <i class="q-icon notranslate material-icons">close</i>
+          </button>
+        </div>
+      </div>
+      <div class="modal__body">
+        <div v-if="!catalog" style="padding:24px;text-align:center;color:#9e9e9e">Загрузка…</div>
+        <template v-else>
+
+          
+          <div class="row items-center justify-between" style="margin-top:2px">
+            <div class="modal__section-title" style="margin:0">Показатели</div>
+            <button class="link-btn" v-if="!createForm" @click="openCreate()" type="button">+ Создать показатель</button>
+          </div>
+
+          
+          <div class="add-form" v-if="createForm" style="margin-top:8px">
+            <div style="font-weight:500;font-size:13px">Новый показатель</div>
+            <div class="form-row">
+              <span class="form-label">Название</span>
+              <input class="form-input" v-model="createForm.display_name" placeholder="напр. Транспорт за день" style="flex:1;min-width:0">
+            </div>
+            <div class="form-row">
+              <span class="form-label">Ключ</span>
+              <input class="form-input" v-model="createForm.key" placeholder="latin_key" style="font-family:monospace;width:14em">
+            </div>
+            <div class="form-row">
+              <span class="form-label">Тип</span>
+              <select class="form-input" v-model="createForm.kind">
+                <option value="daily">за день (сброс в полночь)</option>
+                <option value="gauge">текущее (переносится между днями)</option>
+              </select>
+            </div>
+            <div class="modal__section-title" style="margin:8px 0 0">Привязать запрос (необязательно)</div>
+            <div class="form-row">
+              <span class="form-label">Тип запроса</span>
+              <input class="form-input" v-model="createForm.event_type" list="evt-types" placeholder="event_type" style="flex:1;min-width:0">
+              <span style="font-size:13px;color:#757575">Операция</span>
+              <select class="form-input" v-model="createForm.op">
+                <option value="inc">+value</option><option value="dec">−value</option><option value="set">=value</option>
+              </select>
+              <span style="font-size:13px;color:#757575">Точка</span>
+              <input class="form-input" v-model="createForm.checkpoint" placeholder="любая" style="width:7em">
+            </div>
+            <div class="row" style="gap:8px">
+              <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                      :disabled="savingEvent || !createForm.key || !createForm.display_name" @click="submitCreate" type="button">
+                <span class="q-focus-helper" tabindex="-1"></span>
+                <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+                  <i class="q-icon notranslate material-icons" :class="{ spin: savingEvent }" style="font-size:16px">{{ savingEvent ? 'sync' : 'check' }}</i>
+                  Создать
+                </span>
+              </button>
+              <button class="link-btn" @click="createForm=null" type="button">Отмена</button>
+            </div>
+          </div>
+
+          <div v-if="!catalog.indicators.length" style="padding:10px 0;color:#9e9e9e;font-size:13px">Показателей пока нет.</div>
+          <div class="evt-list">
+            <div class="evt-row" v-for="ind in catalog.indicators" :key="ind.key">
+              <div class="evt-head">
+                <span style="font-weight:600;font-size:14px">{{ ind.display_name }}</span>
+                <span style="font-family:monospace;font-size:12px;color:#9e9e9e">{{ ind.key }}</span>
+                <span class="th-badge badge-configured">{{ ind.kind==='daily' ? 'за день' : 'текущее' }}</span>
+                <span class="th-badge" :class="indStatus(ind)==='displayed' ? 'badge-displayed' : 'badge-none'">
+                  {{ indStatus(ind)==='displayed' ? 'выводится' : 'скрыт' }}
+                </span>
+                <button class="icon-btn danger" style="margin-left:auto;width:26px;height:26px"
+                        @click="deleteIndicator(ind.key, ind.display_name)" title="Удалить показатель" type="button">
+                  <i class="q-icon notranslate material-icons" style="font-size:16px">close</i>
+                </button>
+              </div>
+
+              
+              <div class="evt-map" v-for="t in (triggersByIndicator[ind.key] || [])" :key="t.event_type">
+                <i class="q-icon notranslate material-icons" style="font-size:16px;color:#9e9e9e">circle</i>
+                <span style="color:#757575">({{ opLabel(t.op) }}<template v-if="t.checkpoint">, {{ t.checkpoint }}</template>)</span>
+                <button class="icon-btn" @click="detachRule(t.event_type, ind.key)" title="Отвязать" type="button" style="width:26px;height:26px">
+                  <i class="q-icon notranslate material-icons" style="font-size:16px">link_off</i>
+                </button>
+              </div>
+              <div v-if="!(triggersByIndicator[ind.key] || []).length"
+                   style="font-size:12px;color:#9e9e9e">
+                Нет привязанных запросов — значение меняется вручную (±) или через API.
+              </div>
+
+              
+              <div class="add-form" v-if="bindForm && bindForm.indicator_locked && bindForm.indicator_key===ind.key">
+                <div class="form-row">
+                  <span class="form-label">Тип запроса</span>
+                  <input class="form-input" v-model="bindForm.event_type" list="evt-types" placeholder="event_type" style="flex:1;min-width:0">
+                  <span style="font-size:13px;color:#757575">Операция</span>
+                  <select class="form-input" v-model="bindForm.op">
+                    <option value="inc">+value</option><option value="dec">−value</option><option value="set">=value</option>
+                  </select>
+                  <span style="font-size:13px;color:#757575">Точка</span>
+                  <input class="form-input" v-model="bindForm.checkpoint" placeholder="любая" style="width:7em">
+                </div>
+                <div class="row" style="gap:8px">
+                  <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                          :disabled="savingEvent || !bindForm.event_type" @click="submitBind" type="button">
+                    <span class="q-focus-helper" tabindex="-1"></span>
+                    <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+                      <i class="q-icon notranslate material-icons" :class="{ spin: savingEvent }" style="font-size:16px">{{ savingEvent ? 'sync' : 'add_link' }}</i>
+                      Привязать
+                    </span>
+                  </button>
+                  <button class="link-btn" @click="bindForm=null" type="button">Отмена</button>
+                </div>
+              </div>
+              <button v-else
+                      class="link-btn" @click="openTrigger(ind)" type="button">+ Привязать запрос</button>
+            </div>
+          </div>
+
+          
+          <div class="modal__section-title">Необработанные запросы</div>
+          <div v-if="!unmappedRequests.length" style="font-size:13px;color:#9e9e9e;padding:2px 0">
+            Необработанных запросов нет.
+          </div>
+          <div class="evt-list" v-else>
+            <div class="evt-row" v-for="ev in unmappedRequests" :key="ev.event_type">
+              <div class="evt-head">
+                <span class="evt-type">{{ ev.event_type }}</span>
+                <span class="th-badge badge-unhandled">не привязан</span>
+                <span class="evt-meta">
+                  <template v-if="ev.object_type">{{ ev.object_type }}</template>
+                  <template v-if="ev.checkpoint"> · {{ ev.checkpoint }}</template>
+                  <template v-if="ev.count"> · принято {{ ev.count }}</template>
+                </span>
+                <button class="icon-btn" style="margin-left:auto;width:26px;height:26px"
+                        @click="dismissEvent(ev.event_type)" title="Убрать из реестра" type="button">
+                  <i class="q-icon notranslate material-icons" style="font-size:16px">delete_outline</i>
+                </button>
+              </div>
+
+              
+              <div class="add-form" v-if="bindForm && bindForm.event_locked && bindForm.event_type===ev.event_type">
+                <div class="form-row">
+                  <span class="form-label">Показатель</span>
+                  <select class="form-input" v-model="bindForm.indicator_key" style="flex:1;min-width:0">
+                    <option v-for="ind in catalog.indicators" :key="ind.key" :value="ind.key">{{ ind.display_name }}</option>
+                  </select>
+                  <span style="font-size:13px;color:#757575">Операция</span>
+                  <select class="form-input" v-model="bindForm.op">
+                    <option value="inc">+value</option><option value="dec">−value</option><option value="set">=value</option>
+                  </select>
+                </div>
+                <div class="row" style="gap:8px">
+                  <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                          :disabled="savingEvent || !bindForm.indicator_key" @click="submitBind" type="button">
+                    <span class="q-focus-helper" tabindex="-1"></span>
+                    <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+                      <i class="q-icon notranslate material-icons" :class="{ spin: savingEvent }" style="font-size:16px">{{ savingEvent ? 'sync' : 'add_link' }}</i>
+                      Привязать
+                    </span>
+                  </button>
+                  <button class="link-btn" @click="bindForm=null" type="button">Отмена</button>
+                </div>
+              </div>
+              <div v-else class="row" style="gap:14px">
+                <button class="link-btn" :disabled="!catalog.indicators.length" @click="openBind(ev)" type="button">Привязать к показателю</button>
+                <button class="link-btn" @click="openCreate(ev)" type="button">Создать показатель</button>
+              </div>
+            </div>
+          </div>
+
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <datalist id="evt-types">
+    <option v-for="t in eventTypeList" :key="t" :value="t"></option>
+  </datalist>
+
+  
+  <div class="modal-backdrop" style="z-index:2100" v-if="confirmState" @click.self="confirmNo">
+    <div class="modal" style="width:440px">
+      <div class="modal__head">
+        <span class="modal__title row items-center" style="gap:8px">
+          <i class="q-icon notranslate material-icons" :style="{ color: confirmState.danger ? '#c10015' : 'var(--q-primary)' }">
+            {{ confirmState.danger ? 'warning' : 'help_outline' }}
+          </i>
+          {{ confirmState.title }}
+        </span>
+        <button class="icon-btn" @click="confirmNo" title="Отмена" type="button">
+          <i class="q-icon notranslate material-icons">close</i>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div style="font-size:14px;color:#424242;line-height:1.5">{{ confirmState.message }}</div>
+      </div>
+              <div class="form-row">
+          <span class="form-label">Задержка, сек</span>
+          <input type="number" class="form-input"
+                 :value="cfg.board.lines[modalIndex].threshold?.delay_seconds ?? 0"
+                 @input="setThreshold(modalIndex,'delay_seconds',+$event.target.value)"
+                 min="0" max="3600" style="width:5em"
+                 title="Цвет порога применяется только если условие выполняется непрерывно N секунд">
+          <span style="font-size:12px;color:#9e9e9e">0 = сразу</span>
+        </div>
+      <div class="modal__foot">
+        <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                style="border:1px solid #bdbdbd;color:#616161;background:transparent"
+                @click="confirmNo" type="button">
+          <span class="q-focus-helper" tabindex="-1"></span>
+          <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row">Отмена</span>
+        </button>
+        <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                :style="{ background: confirmState.danger ? '#c10015' : 'var(--q-primary)' }"
+                @click="confirmYes" type="button">
+          <span class="q-focus-helper" tabindex="-1"></span>
+          <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+            <i class="q-icon notranslate material-icons" style="font-size:16px">{{ confirmState.danger ? 'delete' : 'check' }}</i>
+            {{ confirmState.confirmLabel }}
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  
   <div class="toast-area">
     <div class="toast" :class="t.cls" v-for="t in toasts" :key="t.id">
       <i class="q-icon notranslate material-icons" style="font-size:18px">{{ t.icon }}</i>
