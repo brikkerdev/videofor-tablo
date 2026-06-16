@@ -43,6 +43,7 @@ class Pusher:
         self.last_push_at = None
         self._threshold_since: dict[str, datetime] = {}
         self._threshold_prev: dict[str, bool] = {}
+        self._threshold_vals: dict[str, int] = {}
         self._trigger: str = "startup"
         self.push_log: deque = deque(maxlen=PUSH_LOG_SIZE)
 
@@ -83,7 +84,9 @@ class Pusher:
                 duration = ln.threshold.duration_seconds or 0
                 is_alert = _alert(ln.threshold, val)
                 was_alert = self._threshold_prev.get(ln.key, False)
+                prev_val = self._threshold_vals.get(ln.key)
                 self._threshold_prev[ln.key] = is_alert
+                self._threshold_vals[ln.key] = val
 
                 if duration == 0:
                     if is_alert:
@@ -91,7 +94,8 @@ class Pusher:
                     else:
                         self._threshold_since.pop(ln.key, None)
                 else:
-                    if is_alert and (not was_alert or self._trigger == "event"):
+                    val_changed = prev_val is not None and val != prev_val
+                    if is_alert and (not was_alert or val_changed):
                         self._threshold_since[ln.key] = now
                     since = self._threshold_since.get(ln.key)
                     if since and (now - since).total_seconds() >= duration:

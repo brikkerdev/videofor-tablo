@@ -123,7 +123,7 @@ createApp({
     });
     const deviceLabel = computed(() => {
       const d = cfg.value?.device;
-      return d ? `${d.width} × ${d.height} px` : '256 × 96 px';
+      return d ? `${d.width} × ${d.height} px` : '';
     });
 
     const linesWithMeta = computed(() => {
