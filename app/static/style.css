@@ -1,3 +1,5 @@
+[v-cloak] { display: none !important; }
+
 :root {
   --q-primary:  #1976d2;
   --q-secondary:#26a69a;
