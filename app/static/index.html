@@ -845,8 +845,43 @@ input[type=color].color-pick {
                 <span class="th-badge" :class="indStatus(ind)==='displayed' ? 'badge-displayed' : 'badge-none'">
                   {{ indStatus(ind)==='displayed' ? 'выводится' : 'скрыт' }}
                 </span>
-                <button class="link-btn danger" style="margin-left:auto"
+                <button class="link-btn" style="margin-left:auto"
+                        @click="openEdit(ind)" type="button">изменить</button>
+                <button class="link-btn danger"
                         @click="deleteIndicator(ind.key, ind.display_name)" type="button">удалить</button>
+              </div>
+
+              <!-- форма редактирования показателя -->
+              <div class="add-form" v-if="editForm && editForm.key===ind.key" style="margin-top:8px">
+                <div style="font-weight:500;font-size:13px">Изменить показатель</div>
+                <div class="form-row">
+                  <span class="form-label">Название</span>
+                  <input class="form-input" v-model="editForm.display_name" style="flex:1;min-width:0">
+                </div>
+                <div class="form-row">
+                  <span class="form-label">Тип</span>
+                  <select class="form-input" v-model="editForm.kind">
+                    <option value="daily">за день (сброс в полночь)</option>
+                    <option value="gauge">текущее (переносится между днями)</option>
+                  </select>
+                  <span style="font-size:13px;color:#757575">Порядок</span>
+                  <input class="form-input" type="number" v-model.number="editForm.sort_order" style="width:6em">
+                </div>
+                <div class="form-row">
+                  <label class="form-label" style="width:auto"><input type="checkbox" class="form-input" v-model="editForm.enabled"> Активен</label>
+                  <span style="font-size:12px;color:#9e9e9e">выключенный показатель не считается и не выводится</span>
+                </div>
+                <div class="row" style="gap:8px">
+                  <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
+                          :disabled="savingEvent || !editForm.display_name" @click="submitEdit" type="button">
+                    <span class="q-focus-helper" tabindex="-1"></span>
+                    <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
+                      <i class="q-icon notranslate material-icons" :class="{ spin: savingEvent }" style="font-size:16px">{{ savingEvent ? 'sync' : 'check' }}</i>
+                      Сохранить
+                    </span>
+                  </button>
+                  <button class="link-btn" @click="editForm=null" type="button">Отмена</button>
+                </div>
               </div>
 
               <!-- привязанные запросы (триггеры) -->
@@ -1095,6 +1130,7 @@ createApp({
     const catalog        = ref(null);  // каталог /api/event-catalog
     const savingEvent    = ref(false); // идёт создание/привязка
     const createForm     = ref(null);  // форма создания нового показателя
+    const editForm       = ref(null);  // форма редактирования показателя
     const bindForm       = ref(null);  // форма привязки запроса к показателю
     const confirmState   = ref(null);  // диалог подтверждения {title,message,confirmLabel,danger,resolve}
 
@@ -1255,6 +1291,7 @@ createApp({
         op: 'inc',
       };
       bindForm.value = null;
+      editForm.value = null;
     };
     const submitCreate = async () => {
       const f = createForm.value;
@@ -1271,16 +1308,57 @@ createApp({
       finally { savingEvent.value = false; }
     };
 
+    // редактирование существующего показателя (PATCH /api/indicators/{key})
+    const openEdit = (ind) => {
+      editForm.value = {
+        key: ind.key,
+        display_name: ind.display_name,
+        kind: ind.kind,
+        sort_order: ind.sort_order,
+        enabled: ind.enabled,
+      };
+      createForm.value = null;
+      bindForm.value = null;
+    };
+    const submitEdit = async () => {
+      const f = editForm.value;
+      if (!f || !f.display_name) { toast('err', 'Укажите название'); return; }
+      savingEvent.value = true;
+      try {
+        const r = await fetch('/api/indicators/' + encodeURIComponent(f.key), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            display_name: f.display_name,
+            kind: f.kind,
+            sort_order: Number(f.sort_order),
+            enabled: f.enabled,
+          }),
+        });
+        if (!r.ok) {
+          let msg = 'HTTP ' + r.status;
+          try { msg = (await r.json()).message || msg; } catch {}
+          throw new Error(msg);
+        }
+        toast('ok', 'Показатель изменён');
+        editForm.value = null;
+        await refreshAll();
+      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
+      finally { savingEvent.value = false; }
+    };
+
     // привязка запроса к показателю — из карточки показателя или из списка запросов
     const openTrigger = (ind) => {
       bindForm.value = { indicator_key: ind.key, indicator_locked: true,
                          event_type: '', event_locked: false, checkpoint: '', op: 'inc' };
       createForm.value = null;
+      editForm.value = null;
     };
     const openBind = (ev) => {
       bindForm.value = { indicator_key: catalog.value?.indicators[0]?.key || '', indicator_locked: false,
                          event_type: ev.event_type, event_locked: true, checkpoint: ev.checkpoint || '', op: 'inc' };
       createForm.value = null;
+      editForm.value = null;
     };
     const submitBind = async () => {
       const f = bindForm.value;
@@ -1618,11 +1696,11 @@ createApp({
       dragIndex, dragOverIndex, modalIndex, modalLine,
       onDragStart, onDragOver, onDragEnd, onDrop,
       openLineModal, closeLineModal,
-      eventModalOpen, catalog, savingEvent, createForm, bindForm,
+      eventModalOpen, catalog, savingEvent, createForm, editForm, bindForm,
       confirmState, confirmYes, confirmNo,
       opLabel, indStatus, triggersByIndicator, unmappedRequests, eventTypeList,
       openEventModal, closeEventModal, loadCatalog,
-      openCreate, submitCreate, openTrigger, openBind, submitBind,
+      openCreate, submitCreate, openEdit, submitEdit, openTrigger, openBind, submitBind,
       detachRule, deleteIndicator, dismissEvent,
       connDot, connLabel, statusDetail, lastPushLine, deviceLabel,
       linesWithMeta,
