@@ -97,6 +97,9 @@ class Pusher:
                     val_changed = prev_val is not None and val != prev_val
                     if is_alert and (not was_alert or val_changed):
                         self._threshold_since[ln.key] = now
+                        # Wake up pusher when flash expires so board goes white on time.
+                        loop = asyncio.get_running_loop()
+                        loop.call_later(duration + 0.1, self._dirty.set)
                     since = self._threshold_since.get(ln.key)
                     if since and (now - since).total_seconds() >= duration:
                         self._threshold_since.pop(ln.key, None)
