@@ -67,17 +67,20 @@ class TabloClient:
             self._stop = False
             self._sse_task = asyncio.create_task(self._sse_keeper())
 
-    def sse_alive(self) -> bool:
-        return self._sse_task is not None and not self._sse_task.done()
-
     async def _sse_keeper(self) -> None:
         url = self._url("sse.json")
         while not self._stop:
             try:
                 async with self._stream_client.stream("GET", url) as resp:
                     await asyncio.sleep(2)
-                    if self.matrix_ip:
+                    # Источник правды о связи — GET /connect.json: SSE может молчать,
+                    # а уже подключённый шлюз отдаёт connected/размеры сразу.
+                    await self.refresh_status()
+                    # matrix IP нужен только чтобы поднять связь, если её нет.
+                    if not self.connected and self.matrix_ip:
                         await self._post_connect(self.matrix_ip, self.matrix_pass)
+                        await asyncio.sleep(1)
+                        await self.refresh_status()
                     async for line in resp.aiter_lines():
                         if line.startswith("data:"):
                             self._consume(line[5:].strip())
@@ -127,6 +130,7 @@ class TabloClient:
             logger.warning("connect.json не удался: %s", exc)
 
     async def get_device(self) -> dict | None:
+        """Состояние шлюза: GET /connect.json (connected, ip матрицы, размеры)."""
         if not self.base_url:
             return None
         try:
@@ -137,6 +141,20 @@ class TabloClient:
         except Exception as exc:
             logger.warning("Не удалось прочитать connect.json: %s", exc)
             return None
+
+    async def refresh_status(self) -> bool:
+        """Перечитать состояние шлюза и обновить connected/device по факту.
+
+        Уже подключённый к матрице шлюз отдаёт connected:true и размеры панели,
+        даже если SSE-событие device не пришло. При сетевой ошибке прежнее
+        состояние сохраняется.
+        """
+        info = await self.get_device()
+        if info is None:
+            return self.connected
+        self.device = {**(self.device or {}), **info}
+        self.connected = bool(info.get("connected"))
+        return self.connected
 
     async def reconnect(self) -> bool:
         await self._stop_sse()
@@ -153,6 +171,9 @@ class TabloClient:
                 logger.warning("TABLO_URL не задан, push пропускается")
                 self._warned_no_url = True
             return
+        if not self.connected:
+            # SSE мог не прислать device — спросим состояние напрямую.
+            await self.refresh_status()
         if not self.connected:
             raise RuntimeError("табло не подключено, push отложен")
 
