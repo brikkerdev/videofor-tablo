@@ -502,11 +502,13 @@ createApp({
     };
 
     const apiKey = ref(localStorage.getItem(API_KEY_LS) || '');
-    const saveApiKey = () => {
+    const saveApiKey = async () => {
       const v = (apiKey.value || '').trim();
       if (v) localStorage.setItem(API_KEY_LS, v);
       else localStorage.removeItem(API_KEY_LS);
       toast('ok', 'Ключ сохранён');
+      await Promise.all([loadConfig(), loadState(), loadStatus()]);
+      await loadPreview();
     };
 
     const openConnForm = async () => {
