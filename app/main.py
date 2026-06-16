@@ -32,6 +32,21 @@ logger = logging.getLogger("app")
 STATIC_DIR = Path(__file__).parent / "static"
 CONFIG_KEY = "display_config"
 
+_bg_tasks: set[asyncio.Task] = set()
+
+
+def _spawn(coro) -> asyncio.Task:
+    task = asyncio.create_task(coro)
+    _bg_tasks.add(task)
+
+    def _done(t: asyncio.Task) -> None:
+        _bg_tasks.discard(t)
+        if not t.cancelled() and t.exception() is not None:
+            logger.warning("Фоновая задача упала: %s", t.exception())
+
+    task.add_done_callback(_done)
+    return task
+
 
 def build_board(raw: str | None, indicators) -> BoardConfig:
     if raw:
@@ -132,10 +147,28 @@ app = FastAPI(title="videofor-tablo integration", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origin_list,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def admin_guard(request: Request, call_next):
+    path = request.url.path
+    if (
+        settings.api_key
+        and request.method != "OPTIONS"
+        and path.startswith("/api/")
+        and path != "/api/events"
+        and request.headers.get("x-api-key") != settings.api_key
+    ):
+        return JSONResponse(
+            status_code=401,
+            content={"status": "error", "message": "Unauthorized"},
+        )
+    return await call_next(request)
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_handler(request: Request, exc: RequestValidationError):
@@ -298,7 +331,7 @@ async def get_tablo_status(request: Request):
 @app.post("/api/tablo/reconnect")
 async def reconnect_tablo(request: Request):
     tablo: TabloClient = request.app.state.tablo
-    asyncio.create_task(tablo.reconnect())
+    _spawn(tablo.reconnect())
     return {"status": "ok"}
 
 
@@ -336,7 +369,7 @@ async def put_tablo_connection(body: TabloConnectionIn, request: Request):
     await db.set_config("tablo_token",       body.token)
     await db.set_config("tablo_matrix_ip",   body.matrix_ip)
     await db.set_config("tablo_matrix_pass", body.matrix_pass)
-    asyncio.create_task(tablo.reconfigure(body.url, body.token, body.matrix_ip, body.matrix_pass))
+    _spawn(tablo.reconfigure(body.url, body.token, body.matrix_ip, body.matrix_pass))
     return {"status": "ok"}
 
 

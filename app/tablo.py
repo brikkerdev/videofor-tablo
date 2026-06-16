@@ -50,6 +50,7 @@ class TabloClient:
             limits=httpx.Limits(max_connections=1, max_keepalive_connections=0),
         )
         self._req_lock = asyncio.Lock()
+        self._lifecycle_lock = asyncio.Lock()
         self._last_max: int | None = None
         self._warned_no_url = False
         self._sse_task: asyncio.Task | None = None
@@ -145,24 +146,26 @@ class TabloClient:
         return self.connected
 
     async def reconnect(self) -> bool:
-        await self._stop_sse()
-        self.start()
-        for _ in range(16):
-            if self.connected:
-                return True
-            await asyncio.sleep(0.5)
-        return self.connected
+        async with self._lifecycle_lock:
+            await self._stop_sse()
+            self.start()
+            for _ in range(16):
+                if self.connected:
+                    return True
+                await asyncio.sleep(0.5)
+            return self.connected
 
     async def reconfigure(self, url: str, token: str, matrix_ip: str, matrix_pass: str) -> None:
-        await self._stop_sse()
-        self.base_url = url.rstrip("/")
-        self.token = token
-        self.matrix_ip = matrix_ip
-        self.matrix_pass = matrix_pass
-        self._warned_no_url = False
-        self.device = None
-        self._stop = False
-        self.start()
+        async with self._lifecycle_lock:
+            await self._stop_sse()
+            self.base_url = url.rstrip("/")
+            self.token = token
+            self.matrix_ip = matrix_ip
+            self.matrix_pass = matrix_pass
+            self._warned_no_url = False
+            self.device = None
+            self._stop = False
+            self.start()
 
     async def push_areas(self, areas: list[dict]) -> None:
         if not self.base_url:

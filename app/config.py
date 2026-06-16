@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://app:app@db:5432/tablo"
     app_timezone: str = ""
     api_key: str = ""
+    cors_origins: str = ""
 
     tablo_url: str = ""
     tablo_token: str = ""
@@ -18,6 +19,10 @@ class Settings(BaseSettings):
 
     push_retry_seconds: int = 10
     log_level: str = "INFO"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @cached_property
     def tz(self):

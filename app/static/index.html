@@ -465,6 +465,11 @@
               <span>{{ connLabel }}</span>
               <span v-if="status?.url" style="font-family:monospace;color:#757575;margin-left:4px">{{ status.url }}</span>
             </div>
+            <div class="form-row" style="margin-bottom:14px">
+              <span class="form-label">API-ключ</span>
+              <input class="form-input" v-model="apiKey" @change="saveApiKey" type="password"
+                     placeholder="X-API-Key, если включён на сервере" style="flex:1;min-width:0">
+            </div>
             <div v-if="connForm" style="display:flex;flex-direction:column;gap:0">
               <div class="form-row">
                 <span class="form-label">URL шлюза</span>

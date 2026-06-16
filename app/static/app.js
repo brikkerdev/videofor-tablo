@@ -1,5 +1,18 @@
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
 
+const API_KEY_LS = 'tablo_api_key';
+(() => {
+  const orig = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    const url = typeof input === 'string' ? input : (input && input.url) || '';
+    if (url.startsWith('/api/')) {
+      const k = localStorage.getItem(API_KEY_LS);
+      if (k) init = { ...init, headers: { ...(init.headers || {}), 'X-API-Key': k } };
+    }
+    return orig(input, init);
+  };
+})();
+
 createApp({
   setup() {
     const UI_KEY    = 'tablo.editor.ui';
@@ -482,6 +495,14 @@ createApp({
       } catch (e) { toast('err', 'Ошибка переподключения: ' + e.message); }
     };
 
+    const apiKey = ref(localStorage.getItem(API_KEY_LS) || '');
+    const saveApiKey = () => {
+      const v = (apiKey.value || '').trim();
+      if (v) localStorage.setItem(API_KEY_LS, v);
+      else localStorage.removeItem(API_KEY_LS);
+      toast('ok', 'Ключ сохранён');
+    };
+
     const openConnForm = async () => {
       try {
         const r = await fetch('/api/tablo/connection');
@@ -683,6 +704,7 @@ createApp({
       detachRule, deleteIndicator, dismissEvent,
       connDot, connLabel, statusDetail, lastPushLine, deviceLabel,
       connForm, savingConn, openConnForm, saveConn,
+      apiKey, saveApiKey,
       linesWithMeta,
       loadConfig, loadState, loadStatus, loadPreview, loadPushLog,
       save, pushNow, saveAndPush, clearBoard, reconnect,
