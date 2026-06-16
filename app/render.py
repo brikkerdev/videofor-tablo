@@ -102,11 +102,9 @@ def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h,
     eff = _effective_brightness(base_brightness, ln.brightness)
     label_color = value_color = _with_brightness(ln.color, eff)
 
-    if th is not None and _alert(th, val):
-        delay = th.delay_seconds or 0
+    if th is not None:
         since = (threshold_since or {}).get(ind.key)
-        elapsed = (now - since).total_seconds() if (since and now) else 0
-        if delay == 0 or elapsed >= delay:
+        if since is not None:
             value_color = _with_brightness(th.color, eff)
             if th.target == "line":
                 label_color = value_color

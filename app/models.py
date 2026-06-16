@@ -35,7 +35,7 @@ class Threshold(BaseModel):
     op: str = ">="
     color: str = "0xffff0000"
     target: str = "line"
-    delay_seconds: int = 0
+    duration_seconds: int = 0
 
 
 class LineConfig(BaseModel):

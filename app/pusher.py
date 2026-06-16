@@ -42,6 +42,7 @@ class Pusher:
         self.last_error: str = ""
         self.last_push_at = None
         self._threshold_since: dict[str, datetime] = {}
+        self._threshold_prev: dict[str, bool] = {}
         self.push_log: deque = deque(maxlen=PUSH_LOG_SIZE)
 
     def mark_dirty(self) -> None:
@@ -73,12 +74,25 @@ class Pusher:
             for ln in self.board.lines:
                 if ln.threshold is None:
                     self._threshold_since.pop(ln.key, None)
+                    self._threshold_prev.pop(ln.key, None)
                     continue
                 val = self.state.values.get(ln.key, 0)
-                if _alert(ln.threshold, val):
-                    self._threshold_since.setdefault(ln.key, now)
+                duration = ln.threshold.duration_seconds or 0
+                is_alert = _alert(ln.threshold, val)
+                was_alert = self._threshold_prev.get(ln.key, False)
+                self._threshold_prev[ln.key] = is_alert
+
+                if duration == 0:
+                    if is_alert:
+                        self._threshold_since.setdefault(ln.key, now)
+                    else:
+                        self._threshold_since.pop(ln.key, None)
                 else:
-                    self._threshold_since.pop(ln.key, None)
+                    if is_alert and not was_alert:
+                        self._threshold_since[ln.key] = now
+                    since = self._threshold_since.get(ln.key)
+                    if since and (now - since).total_seconds() >= duration:
+                        self._threshold_since.pop(ln.key, None)
 
             areas = render_areas(
                 self.state.indicators,

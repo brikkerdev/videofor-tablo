@@ -455,11 +455,9 @@ createApp({
     
     const setThreshold = (i, field, val) => {
       const ln = cfg.value.board.lines[i];
-      if (!ln.threshold) ln.threshold = { value: null, op: '>=', color: '0xffff0000', target: 'line', delay_seconds: 0 };
+      if (!ln.threshold) ln.threshold = { value: null, op: '>=', color: '0xffff0000', target: 'line', duration_seconds: 0 };
       if (field === 'value') {
         ln.threshold.value = val === '' ? null : Number(val);
-      } else if (field === 'delay_seconds') {
-        ln.threshold.delay_seconds = Number(val) || 0;
       } else {
         ln.threshold[field] = val;
       }
