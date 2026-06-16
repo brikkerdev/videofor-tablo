@@ -218,6 +218,7 @@ createApp({
     const loadCatalog = async () => {
       try {
         const r = await fetch('/api/event-catalog');
+        if (!r.ok) throw new Error(r.status === 401 ? 'неверный API-ключ' : 'HTTP ' + r.status);
         catalog.value = await r.json();
       } catch (e) { toast('err', 'Ошибка каталога: ' + e.message); }
     };
@@ -391,6 +392,7 @@ createApp({
     const loadConfig = async () => {
       try {
         const r = await fetch('/api/display/config');
+        if (!r.ok) throw new Error(r.status === 401 ? 'неверный API-ключ' : 'HTTP ' + r.status);
         cfg.value = await r.json();
         baseline = JSON.stringify(cfg.value.board);
         const draft = LS.get(DRAFT_KEY);
@@ -416,6 +418,7 @@ createApp({
     const loadState = async () => {
       try {
         const r = await fetch('/api/state');
+        if (!r.ok) return;
         stateData.value = await r.json();
       } catch { /* silent */ }
     };
@@ -423,6 +426,7 @@ createApp({
     const loadStatus = async () => {
       try {
         const r = await fetch('/api/tablo/status');
+        if (!r.ok) return;
         status.value = await r.json();
       } catch { /* silent */ }
     };
@@ -430,6 +434,7 @@ createApp({
     const loadPushLog = async () => {
       try {
         const r = await fetch('/api/tablo/push-log');
+        if (!r.ok) return;
         pushLog.value = await r.json();
       } catch { /* silent */ }
     };
@@ -437,6 +442,7 @@ createApp({
     const loadPreview = async () => {
       try {
         const r = await fetch('/api/display/preview');
+        if (!r.ok) return;
         const p = await r.json();
         await nextTick();
         drawCanvas(p);
@@ -506,6 +512,7 @@ createApp({
     const openConnForm = async () => {
       try {
         const r = await fetch('/api/tablo/connection');
+        if (!r.ok) throw new Error(r.status === 401 ? 'неверный API-ключ' : 'HTTP ' + r.status);
         connForm.value = await r.json();
       } catch (e) { toast('err', 'Ошибка загрузки настроек: ' + e.message); }
     };
