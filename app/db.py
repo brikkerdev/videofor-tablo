@@ -123,8 +123,6 @@ class Database:
     async def set_pushed_at(self) -> None:
         await self.pool.execute("update push_state set pushed_at = now() where id = 1")
 
-    # ── Реестр наблюдаемых типов событий ──────────────────────────────
-
     async def record_observed_event(self, event: EventIn) -> None:
         await self.pool.execute(
             "insert into observed_events "
@@ -152,8 +150,6 @@ class Database:
             "delete from observed_events where event_type = $1", event_type
         )
 
-    # ── Справочники: показатели и правила (полное чтение) ─────────────
-
     async def load_all_indicators(self) -> list[dict]:
         rows = await self.pool.fetch(
             "select key, display_name, kind, sort_order, enabled "
@@ -176,8 +172,6 @@ class Database:
         return await self.pool.fetchval(
             "select coalesce(max(sort_order), 0) from indicators"
         )
-
-    # ── Справочники: мутации ──────────────────────────────────────────
 
     async def create_indicator(
         self, key: str, display_name: str, kind: str, sort_order: int

@@ -22,7 +22,7 @@ from .models import (
     RuleIn,
 )
 from .pusher import Pusher
-from .render import BOARD_H, BOARD_W, render_areas, render_text
+from .render import BOARD_H, BOARD_W, render_areas
 from .rules import apply_op, match_rules
 from .state import StateCache
 from .tablo import TabloClient
@@ -54,12 +54,6 @@ def slugify(value: str) -> str:
 
 
 async def reload_dictionaries(app: FastAPI, prune: bool = False) -> None:
-    """Перечитать справочники из БД в кэш без рестарта (docs §5.1).
-
-    Подхватывает новые/изменённые показатели и правила, до-создаёт строки board
-    для новых показателей. prune=True убирает из board.lines ключи удалённых
-    показателей (конфиг отключённых, но существующих показателей сохраняется).
-    """
     db: Database = app.state.db
     cache: StateCache = app.state.cache
     async with app.state.lock:
@@ -143,12 +137,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-import os as _os
-_frontend = _os.path.join(_os.path.dirname(__file__), "..", "frontend")
-if _os.path.isdir(_frontend):
-    app.mount("/ui", StaticFiles(directory=_frontend, html=True), name="frontend")
-
-
 @app.exception_handler(RequestValidationError)
 async def validation_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
@@ -175,7 +163,6 @@ async def receive_event(
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     cache: StateCache = request.app.state.cache
-    # Регистрируем тип события в реестре (даже если правила нет) — для конструктора.
     await request.app.state.db.record_observed_event(event)
     matched = match_rules(request.app.state.rules, event.event_type, event.checkpoint)
     if not matched:
@@ -186,18 +173,25 @@ async def receive_event(
 
     async with request.app.state.lock:
         cache.rollover_if_needed()
+        old_vals: dict[str, int] = {}
         changes: dict[str, int] = {}
         for rule in matched:
-            current = changes.get(
-                rule.indicator_key, cache.values.get(rule.indicator_key, 0)
-            )
+            if rule.indicator_key not in old_vals:
+                old_vals[rule.indicator_key] = cache.values.get(rule.indicator_key, 0)
+            current = changes.get(rule.indicator_key, old_vals[rule.indicator_key])
             changes[rule.indicator_key] = apply_op(rule.op, current, event.value)
         await request.app.state.db.record_event(event, changes, cache.day)
         cache.values.update(changes)
         cache.updated_at = cache.now()
         cache.last_event_at = cache.now()
 
-    request.app.state.pusher.mark_dirty("event")
+    ind_by_key = {ind.key: ind.display_name for ind in cache.indicators}
+    parts = []
+    for key, new_val in changes.items():
+        delta = new_val - old_vals.get(key, 0)
+        name = ind_by_key.get(key, key)
+        parts.append(f"{name} {'+' if delta >= 0 else ''}{delta}")
+    request.app.state.pusher.mark_dirty("event", details="; ".join(parts))
     return {
         "status": "success",
         "message": "Data received and displayed",
@@ -428,8 +422,8 @@ async def get_event_catalog(request: Request):
                 "checkpoint": o["checkpoint"] if o else None,
                 "count": o["count"] if o else 0,
                 "last_seen": o["last_seen"].isoformat() if o and o["last_seen"] else None,
-                "observed": o is not None,            # есть строка в реестре
-                "received": bool(o and o["count"] > 0),  # событие реально приходило
+                "observed": o is not None,
+                "received": bool(o and o["count"] > 0),
                 "status": status,
                 "mappings": mappings,
             }

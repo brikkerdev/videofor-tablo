@@ -18,23 +18,7 @@ def _with_brightness(color: str, brightness: int) -> str:
     return f'0x{brightness:02x}{m.group(1)}' if m else color
 
 TEXT_PAD = 4
-
-# Ширина текста области (доля кегля на символ). Панель центрирует текст внутри
-# области, а её шрифт заметно шире экранного Arial из предпросмотра — поэтому
-# берём с запасом, чтобы текст гарантированно влезал и панель не включала
-# прокрутку. Предпросмотр (drawCanvas) прижимает текст к краю области, поэтому
-# выглядит так же, как на панели.
 WIDTH_RATIO = 0.75
-
-
-def render_text(indicators: list[Indicator], values: dict[str, int]) -> str:
-    if not indicators:
-        return ""
-    width = max(len(ind.display_name) for ind in indicators) + 1
-    return "\n".join(
-        f"{(ind.display_name + ':').ljust(width)} {values.get(ind.key, 0)}"
-        for ind in indicators
-    )
 
 
 def _fit_font(size: int, area_h: int) -> int:
@@ -46,7 +30,6 @@ def _text_w(msg: str, fontsize: int) -> int:
 
 
 def _align_zone(slot_x: int, slot_w: int, msg: str, fontsize: int, pad: int, align: str):
-    # Рамка по ширине текста, прижата к нужному краю (с отступом pad от края).
     tw = min(max(1, slot_w - 2 * pad), _text_w(msg, fontsize))
     if align == "center":
         return slot_x + (slot_w - tw) // 2, tw
@@ -83,8 +66,6 @@ def _area(msg, x, y, w, h, fontname, fontsize, color, stunt, align="left") -> di
     return {
         "msg": msg, "x": x, "y": y, "w": w, "h": h,
         "fontname": fontname, "fontsize": fontsize, "fontcolor": color, "stunt": stunt,
-        # Подсказка предпросмотру, к какому краю области прижимать текст
-        # (панель центрирует сама; на устройство не уходит — см. app/tablo.py).
         "align": align,
     }
 
@@ -94,7 +75,7 @@ def _effective_brightness(base: int, item: int) -> int:
 
 
 def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h,
-                base_brightness: int = 255, threshold_since=None, now=None) -> list[dict]:
+                base_brightness: int = 255, threshold_since=None) -> list[dict]:
     th = ln.threshold
     label = f"{ind.display_name}:"
     value = str(val)
@@ -109,9 +90,6 @@ def _line_areas(ind, val, ln, slot_x, col_w, board, fs, y, line_h,
             if th.target == "line":
                 label_color = value_color
 
-    # Метка прижата к левому краю колонки, значение — к правому, оба с отступом
-    # board.padding от краёв экрана. Рамки — по ширине текста (с запасом), чтобы
-    # текст влезал; панель центрирует текст в рамке, предпросмотр — прижимает.
     pad = board.padding
     gap = max(2, fs // 4)
     vw = min(_text_w(value, fs), col_w - 2 * pad)
@@ -151,8 +129,6 @@ def render_areas(
                   top_color, board.top_panel.stunt, board.top_panel.align)
         )
 
-    # Порядок вывода задаётся порядком board.lines (drag&drop в редакторе);
-    # показатели без строки в конфиге добавляются в конце по sort_order из БД.
     ind_by_key = {ind.key: ind for ind in indicators}
     ordered_keys = [ln.key for ln in board.lines if ln.key in ind_by_key]
     seen = set(ordered_keys)
@@ -174,8 +150,6 @@ def render_areas(
                 for ind in visible
             )
 
-        # Уменьшаем кегль, пока самая длинная строка «метка+значение» не влезет
-        # в колонку — иначе панель не уместит текст и включит прокрутку.
         while fs > MIN_FONT and _widest_line(fs) > col_w:
             fs -= 1
         for i, ind in enumerate(visible):
@@ -186,8 +160,7 @@ def render_areas(
                 _line_areas(ind, val, ln, c * col_w, col_w, board, fs,
                             top_h + r * line_h, line_h,
                             base_brightness=board.screen_brightness,
-                            threshold_since=threshold_since,
-                            now=now)
+                            threshold_since=threshold_since)
             )
 
     out: list[dict] = []

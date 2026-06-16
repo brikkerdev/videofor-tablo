@@ -45,11 +45,13 @@ class Pusher:
         self._threshold_prev: dict[str, bool] = {}
         self._threshold_vals: dict[str, int] = {}
         self._trigger: str = "startup"
+        self._trigger_details: str = ""
         self.push_log: deque = deque(maxlen=PUSH_LOG_SIZE)
 
-    def mark_dirty(self, trigger: str = "manual") -> None:
+    def mark_dirty(self, trigger: str = "manual", details: str = "") -> None:
         self.paused = False
         self._trigger = trigger
+        self._trigger_details = details
         self._dirty.set()
 
     def _clock_running(self) -> bool:
@@ -97,7 +99,6 @@ class Pusher:
                     val_changed = prev_val is not None and val != prev_val
                     if is_alert and (not was_alert or val_changed):
                         self._threshold_since[ln.key] = now
-                        # Wake up pusher when flash expires so board goes white on time.
                         loop = asyncio.get_running_loop()
                         loop.call_later(duration + 0.1, self._dirty.set)
                     since = self._threshold_since.get(ln.key)
@@ -121,13 +122,13 @@ class Pusher:
                 self.last_ok = True
                 self.last_error = ""
                 self.last_push_at = now
-                self.push_log.appendleft({"at": now.strftime("%H:%M:%S"), "ok": True, "error": "", "trigger": self._trigger})
+                self.push_log.appendleft({"at": now.strftime("%H:%M:%S"), "ok": True, "error": "", "trigger": self._trigger, "details": self._trigger_details})
                 logger.info("Состояние доставлено на табло (%d областей)", len(areas))
             except Exception as exc:
                 self.last_ok = False
                 self.last_error = str(exc)
                 self.last_push_at = now
-                self.push_log.appendleft({"at": now.strftime("%H:%M:%S"), "ok": False, "error": str(exc), "trigger": self._trigger})
+                self.push_log.appendleft({"at": now.strftime("%H:%M:%S"), "ok": False, "error": str(exc), "trigger": self._trigger, "details": self._trigger_details})
                 logger.warning("Push на табло не удался: %s", exc)
                 self._dirty.set()
                 await asyncio.sleep(self.retry_seconds)

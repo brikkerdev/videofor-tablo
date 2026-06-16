@@ -9,8 +9,6 @@ logger = logging.getLogger("app.tablo")
 BATCH_SIZE = 4
 INTER_BATCH_DELAY = 0.4
 
-# Поля, которые понимает шлюз. Лишние ключи (например подсказка `align`
-# для предпросмотра) в message.json не отправляем.
 _DEVICE_KEYS = ("id", "msg", "x", "y", "w", "h", "fontname", "fontsize", "fontcolor", "stunt")
 
 
@@ -73,10 +71,7 @@ class TabloClient:
             try:
                 async with self._stream_client.stream("GET", url) as resp:
                     await asyncio.sleep(2)
-                    # Источник правды о связи — GET /connect.json: SSE может молчать,
-                    # а уже подключённый шлюз отдаёт connected/размеры сразу.
                     await self.refresh_status()
-                    # matrix IP нужен только чтобы поднять связь, если её нет.
                     if not self.connected and self.matrix_ip:
                         await self._post_connect(self.matrix_ip, self.matrix_pass)
                         await asyncio.sleep(1)
@@ -130,7 +125,6 @@ class TabloClient:
             logger.warning("connect.json не удался: %s", exc)
 
     async def get_device(self) -> dict | None:
-        """Состояние шлюза: GET /connect.json (connected, ip матрицы, размеры)."""
         if not self.base_url:
             return None
         try:
@@ -143,12 +137,6 @@ class TabloClient:
             return None
 
     async def refresh_status(self) -> bool:
-        """Перечитать состояние шлюза и обновить connected/device по факту.
-
-        Уже подключённый к матрице шлюз отдаёт connected:true и размеры панели,
-        даже если SSE-событие device не пришло. При сетевой ошибке прежнее
-        состояние сохраняется.
-        """
         info = await self.get_device()
         if info is None:
             return self.connected
@@ -183,7 +171,6 @@ class TabloClient:
                 self._warned_no_url = True
             return
         if not self.connected:
-            # SSE мог не прислать device — спросим состояние напрямую.
             await self.refresh_status()
         if not self.connected:
             raise RuntimeError("табло не подключено, push отложен")

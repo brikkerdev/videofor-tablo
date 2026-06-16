@@ -68,12 +68,12 @@ class BoardConfig(BaseModel):
 class RuleIn(BaseModel):
     event_type: str
     checkpoint: str | None = None
-    indicator_key: str | None = None  # для создания показателя подставляется сервером
+    indicator_key: str | None = None
     op: Literal["inc", "dec", "set"] = "inc"
 
 
 class IndicatorIn(BaseModel):
-    key: str | None = None  # по умолчанию — slug из event_type/display_name
+    key: str | None = None
     display_name: str
     kind: Literal["daily", "gauge"] = "daily"
     sort_order: int | None = None
