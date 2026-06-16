@@ -7,239 +7,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/quasar@2.14.1/dist/quasar.prod.css" rel="stylesheet">
-<style>
-:root {
-  --q-primary:  #1976d2;
-  --q-secondary:#26a69a;
-  --q-positive: #21ba45;
-  --q-negative: #c10015;
-  --q-dark:     #1d1d1d;
-}
-
-/* ── Tailwind-prefix utilities ── */
-.tw-h-screen        { height:100vh }
-.tw-flex            { display:flex !important }
-.tw-flex-col        { flex-direction:column !important }
-.tw-overflow-hidden { overflow:hidden !important }
-.tw-font-medium     { font-weight:500 }
-.tw-gap-1           { gap:.25rem }
-.tw-gap-2           { gap:.5rem }
-.tw-gap-4           { gap:1rem }
-.tw-justify-end     { justify-content:flex-end !important }
-.tw-ml-auto         { margin-left:auto !important }
-.tw-h-14            { height:3.5rem }
-.tw-mt-auto         { margin-top:auto !important }
-
-* { box-sizing:border-box }
-body { margin:0; font-family:Roboto,sans-serif; overflow:hidden }
-
-/* ── Drawer ── */
-.q-drawer {
-  top:0; bottom:0; background:#fff;
-  display:flex; flex-direction:column;
-  border-right:1px solid rgba(0,0,0,.12);
-  transition:width .25s;
-  position:fixed; left:0; z-index:100;
-}
-.q-drawer.mini { width:56px !important }
-.q-drawer.mini .hide-collapsed,
-.q-drawer.mini .q-item__section--main,
-.q-drawer.mini .q-item__label,
-.q-drawer.mini .q-expansion-item__content,
-.q-drawer.mini .q-expansion-item__toggle-icon { display:none !important }
-.q-drawer__content { height:100%; overflow-y:auto; overflow-x:hidden }
-
-/* ── Page container ── */
-.q-page-container { min-height:100vh; transition:padding-left .25s; overflow-y:auto; height:100vh }
-.q-page           { min-height:100vh }
-.q-layout-padding { padding:16px }
-
-/* ── Nav ── */
-.rotate-180 .q-icon { transform:rotate(180deg) }
-.nav-active, .q-router-link--active {
-  background:var(--q-primary) !important; color:#fff !important;
-}
-.nav-active .q-icon { color:#fff !important }
-
-/* ── Tabs (manual) ── */
-.my-tabs { border-bottom:2px solid #e0e0e0; display:flex; gap:0; margin-bottom:16px }
-.my-tab {
-  padding:10px 20px; cursor:pointer; font-size:14px; font-weight:500;
-  color:#757575; border-bottom:2px solid transparent; margin-bottom:-2px;
-  text-transform:uppercase; letter-spacing:.05em; transition:color .2s;
-}
-.my-tab:hover { color:var(--q-primary) }
-.my-tab.active { color:var(--q-primary); border-bottom-color:var(--q-primary) }
-
-/* ── Status dot ── */
-.dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px }
-.dot-ok   { background:#21ba45 }
-.dot-err  { background:#c10015 }
-.dot-warn { background:#f2c037 }
-.dot-grey { background:#9e9e9e }
-
-/* ── Canvas wrapper ── */
-.canvas-wrap {
-  background:#0d0d0d; border:4px solid #1a1a1a;
-  border-radius:6px; overflow:hidden;
-  display:block; line-height:0;
-  position:relative;
-  box-shadow:inset 0 0 30px rgba(0,0,0,.8), 0 4px 20px rgba(0,0,0,.5);
-}
-.canvas-wrap canvas {
-  display:block;
-  image-rendering:pixelated;
-  image-rendering:crisp-edges;
-  width:100%; height:auto;
-}
-
-/* ── Form elements ── */
-.form-row { display:flex; align-items:center; gap:12px; padding:8px 0; flex-wrap:wrap }
-.form-label { font-size:13px; color:#424242; min-width:160px; flex-shrink:0 }
-.form-input {
-  border:1px solid #bdbdbd; border-radius:4px;
-  padding:6px 10px; font-size:13px; font-family:Roboto,sans-serif;
-  outline:none; transition:border-color .2s; background:#fff;
-}
-.form-input:focus { border-color:var(--q-primary) }
-.form-input[type=number] { width:5.5em }
-.form-input[type=checkbox] { width:18px; height:18px; cursor:pointer; accent-color:var(--q-primary) }
-select.form-input { min-width:120px }
-
-/* ── Lines table ── */
-.lines-table { width:100%; border-collapse:collapse; font-size:13px }
-.lines-table th {
-  text-align:left; padding:8px 10px; border-bottom:2px solid #e0e0e0;
-  font-size:11px; font-weight:500; color:#9e9e9e; text-transform:uppercase; letter-spacing:.6px;
-}
-.lines-table td { padding:6px 10px; border-bottom:1px solid #f5f5f5; vertical-align:middle }
-.lines-table tr:last-child td { border-bottom:none }
-
-/* ── Adjust buttons ── */
-.adj-btn {
-  border:none; border-radius:4px; padding:4px 8px; font-size:12px;
-  font-weight:500; cursor:pointer; font-family:Roboto,sans-serif; line-height:1.4;
-}
-.adj-neg { background:#fce4ec; color:#c62828; }
-.adj-neg:hover { background:#f8bbd0; }
-.adj-pos { background:#e8f5e9; color:#2e7d32; }
-.adj-pos:hover { background:#c8e6c9; }
-
-/* ── Color picker ── */
-input[type=color].color-pick {
-  width:32px; height:28px; padding:2px 3px; cursor:pointer;
-  border:1px solid #bdbdbd; border-radius:4px; background:#fff;
-}
-
-/* ── Spinner ── */
-@keyframes spin { to { transform:rotate(360deg) } }
-.spin { display:inline-block; animation:spin 1s linear infinite }
-
-/* ── Toast ── */
-.toast-area { position:fixed; bottom:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; align-items:flex-end }
-.toast {
-  background:#323232; color:#fff; border-radius:4px; padding:10px 16px;
-  font-size:14px; box-shadow:0 3px 10px rgba(0,0,0,.35);
-  display:flex; align-items:center; gap:8px; max-width:340px;
-  animation:toastIn .2s ease;
-}
-.toast.ok  { background:#388e3c }
-.toast.err { background:#c62828 }
-@keyframes toastIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
-
-/* ── Line cards (показатели) ── */
-.line-cards { display:grid; gap:12px; }
-.line-card {
-  border:1px solid #e0e0e0; border-radius:6px; background:#fff; padding:10px 14px;
-  display:flex; flex-direction:row; align-items:center; flex-wrap:wrap; gap:8px 16px;
-  transition:box-shadow .15s, border-color .15s, opacity .15s;
-}
-.line-card:hover { box-shadow:0 2px 8px rgba(0,0,0,.08) }
-.line-card.dragging { opacity:.35 }
-.line-card.drag-over { border-color:var(--q-primary); box-shadow:0 0 0 2px rgba(25,118,210,.25) }
-.line-card.disabled .line-card__title { color:#9e9e9e }
-.line-card__title {
-  font-weight:500; font-size:14px; min-width:90px;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
-.drag-handle { cursor:grab; color:#bdbdbd; display:flex; align-items:center; user-select:none }
-.drag-handle:hover { color:#757575 }
-.drag-handle:active { cursor:grabbing }
-.icon-btn {
-  border:none; background:transparent; cursor:pointer; color:#757575;
-  width:30px; height:30px; border-radius:50%; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; transition:background .15s, color .15s;
-}
-.icon-btn:hover { background:#f0f0f0; color:var(--q-primary) }
-.line-card__quick { display:flex; align-items:center; gap:8px; font-size:13px; color:#424242; white-space:nowrap }
-.line-card .icon-btn { margin-left:auto }
-.th-badge {
-  font-size:11px; color:#616161; background:#f5f5f5; border-radius:4px;
-  padding:3px 8px; display:inline-flex; align-items:center; gap:4px;
-}
-.th-badge.grad { background:#e8f5e9; color:#2e7d32 }
-
-/* ── Modal ── */
-.modal-backdrop {
-  position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2000;
-  display:flex; align-items:center; justify-content:center; padding:16px;
-  animation:fadeIn .15s ease;
-}
-@keyframes fadeIn { from{opacity:0} to{opacity:1} }
-.modal {
-  background:#fff; border-radius:8px; width:540px; max-width:100%;
-  max-height:90vh; display:flex; flex-direction:column;
-  box-shadow:0 8px 40px rgba(0,0,0,.3); animation:modalIn .18s ease;
-}
-@keyframes modalIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
-.modal__head {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:14px 20px; border-bottom:1px solid #eee; flex-shrink:0;
-}
-.modal__title { font-size:16px; font-weight:500; color:#212121 }
-.modal__body { padding:8px 20px 16px; overflow-y:auto }
-.modal__foot {
-  padding:12px 20px; border-top:1px solid #eee; flex-shrink:0;
-  display:flex; justify-content:flex-end; gap:10px;
-}
-.modal__section-title {
-  font-size:11px; font-weight:500; color:#9e9e9e; text-transform:uppercase;
-  letter-spacing:.6px; margin:14px 0 2px;
-}
-.modal--wide { width:640px }
-
-/* ── Каталог событий ── */
-.evt-list { display:flex; flex-direction:column; gap:8px; margin-top:8px }
-.evt-row { border:1px solid #eee; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:8px }
-.evt-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
-.evt-type { font-family:monospace; font-weight:500; font-size:13px; color:#212121 }
-.evt-meta { font-size:11px; color:#9e9e9e }
-.badge-displayed  { background:#e8f5e9; color:#2e7d32 }
-.badge-configured { background:#eceff1; color:#546e7a }
-.badge-unhandled  { background:#fff3e0; color:#e65100 }
-.badge-none       { background:#f5f5f5; color:#9e9e9e }
-.evt-map { font-size:12px; color:#424242; display:flex; align-items:center; gap:6px; flex-wrap:wrap }
-.evt-map .material-icons { font-size:14px; color:#9e9e9e }
-.link-btn { border:none; background:none; color:var(--q-primary); cursor:pointer; font-size:12px; padding:2px 4px; border-radius:4px }
-.link-btn:hover { background:#f0f0f0 }
-.link-btn.danger { color:#c62828 }
-.add-form { background:#fafafa; border:1px solid #eee; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:8px }
-.seg { display:inline-flex; border:1px solid #bdbdbd; border-radius:4px; overflow:hidden }
-.seg button { border:none; background:#fff; padding:5px 12px; font-size:12px; cursor:pointer; color:#616161 }
-.seg button.active { background:var(--q-primary); color:#fff }
-</style>
+<link href="/ui/style.css" rel="stylesheet">
 </head>
 
 <body class="overflow-hidden desktop no-touch body--light">
 <div id="q-app" class="tw-h-screen tw-flex">
 
-  <!-- ═══════════ SIDEBAR ═══════════ -->
   <aside class="q-drawer q-drawer--left q-drawer--bordered q-drawer--standard"
          :class="{ mini }" :style="{ width: mini ? '56px' : '300px' }">
     <div class="q-drawer__content fit scroll tw-font-medium">
       <div class="q-list full-height tw-flex tw-flex-col tw-overflow-hidden">
 
-        <!-- logo row -->
         <div class="row full-width justify-around tw-gap-4 items-center tw-h-14">
           <div class="q-img q-img--menu hide-collapsed" style="width:120px;visibility:hidden">
             <div style="padding-bottom:31.5%"></div>
@@ -266,7 +44,6 @@ input[type=color].color-pick {
 
           <hr class="q-separator q-separator--horizontal q-separator--horizontal-inset" style="margin:8px 0">
 
-          <!-- Устройства -->
           <div class="q-expansion-item q-item-type q-expansion-item--standard"
                :class="devOpen ? 'q-expansion-item--expanded' : 'q-expansion-item--collapsed'">
             <div class="q-expansion-item__container relative-position">
@@ -295,7 +72,6 @@ input[type=color].color-pick {
             </div>
           </div>
 
-          <!-- Отчёты -->
           <div class="q-expansion-item q-item-type q-expansion-item--standard"
                :class="repOpen ? 'q-expansion-item--expanded' : 'q-expansion-item--collapsed'">
             <div class="q-expansion-item__container relative-position">
@@ -335,7 +111,6 @@ input[type=color].color-pick {
           </a>
         </div>
 
-        <!-- user footer -->
         <div class="tw-mt-auto">
           <hr class="q-separator q-separator--horizontal q-separator--horizontal-inset">
           <div class="row items-center justify-between q-py-sm tw-gap-2 q-px-lg">
@@ -359,11 +134,9 @@ input[type=color].color-pick {
     </div>
   </aside>
 
-  <!-- ═══════════ MAIN ═══════════ -->
   <div class="q-page-container" :style="{ paddingLeft: mini ? '56px' : '300px' }" style="flex:1">
     <main class="q-page q-layout-padding column">
 
-      <!-- header -->
       <div class="row justify-between items-center full-width q-mb-md">
         <span class="text-h5 text-bold">Информационные табло</span>
         <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
@@ -385,7 +158,6 @@ input[type=color].color-pick {
         </button>
       </div>
 
-      <!-- connection status card -->
       <div class="q-card q-mb-md" style="border-radius:4px">
         <div class="q-card__section q-card__section--vert row items-center" style="gap:20px;flex-wrap:wrap;padding:12px 16px">
           <div style="flex:1;min-width:220px">
@@ -419,16 +191,13 @@ input[type=color].color-pick {
         </div>
       </div>
 
-      <!-- tabs -->
       <div class="my-tabs">
         <div class="my-tab" :class="{ active: tab==='overview' }" @click="tab='overview'">Обзор</div>
         <div class="my-tab" :class="{ active: tab==='settings' }" @click="tab='settings'">Настройка вывода</div>
       </div>
 
-      <!-- ── TAB: OVERVIEW ── -->
       <template v-if="tab==='overview'">
 
-        <!-- metrics -->
         <div class="row q-col-gutter-md q-mb-md" v-if="stateData">
           <div class="col-12 col-sm-4" v-for="ind in stateData.indicators" :key="ind.key">
             <div class="q-card" style="border-radius:4px">
@@ -447,7 +216,6 @@ input[type=color].color-pick {
           </div>
         </div>
 
-        <!-- canvas preview -->
         <div class="q-card" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div class="row items-center justify-between q-mb-md">
@@ -474,10 +242,8 @@ input[type=color].color-pick {
 
       </template>
 
-      <!-- ── TAB: SETTINGS ── -->
       <template v-if="tab==='settings' && cfg">
 
-        <!-- Top panel -->
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
@@ -529,15 +295,18 @@ input[type=color].color-pick {
           </div>
         </div>
 
-        <!-- General params -->
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
               Общие параметры строк
             </div>
             <div class="form-row">
-              <span class="form-label">Отступ от краёв, px</span>
-              <input type="number" class="form-input" v-model.number="cfg.board.padding" min="0" max="40" style="width:5em">
+              <span class="form-label">Выравнивание</span>
+              <select class="form-input" v-model="cfg.board.align">
+                <option value="left">слева</option>
+                <option value="center">по центру</option>
+                <option value="right">справа</option>
+              </select>
               <span style="font-size:13px;color:#757575;margin-left:12px">Столбцы</span>
               <select class="form-input" v-model.number="cfg.board.columns">
                 <option :value="1">1</option>
@@ -557,72 +326,87 @@ input[type=color].color-pick {
           </div>
         </div>
 
-        <!-- Lines -->
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
-            <div class="row items-center justify-between q-mb-md">
-              <div class="row items-center" style="gap:12px">
-                <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px">
-                  Показатели
-                </div>
-                <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                        style="border:1px solid var(--q-primary);color:var(--q-primary);background:transparent"
-                        @click="openEventModal" type="button">
-                  <span class="q-focus-helper" tabindex="-1"></span>
-                  <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:5px">
-                    <i class="q-icon notranslate material-icons" style="font-size:16px">insights</i>
-                    Конструктор показателей
-                  </span>
-                </button>
-              </div>
-              <span style="font-size:12px;color:#9e9e9e;display:flex;align-items:center;gap:4px">
-                <i class="q-icon notranslate material-icons" style="font-size:15px">drag_indicator</i>
-                Перетащите для изменения порядка
-              </span>
+            <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
+              Показатели
             </div>
-            <div class="line-cards"
-                 :style="{ gridTemplateColumns: 'repeat(' + (Number(cfg.board.columns) === 2 ? 2 : 1) + ', minmax(0, 1fr))' }">
-              <div v-for="(ln, i) in linesWithMeta" :key="ln.key"
-                   class="line-card"
-                   :class="{ dragging: dragIndex===i, 'drag-over': dragOverIndex===i && dragIndex!==null && dragIndex!==i, disabled: !cfg.board.lines[i].enabled }"
-                   @dragover.prevent="onDragOver(i)" @dragenter.prevent @drop="onDrop(i)">
-                <span class="drag-handle material-icons" draggable="true"
-                      @dragstart="onDragStart(i, $event)" @dragend="onDragEnd"
-                      title="Перетащить">drag_indicator</span>
-                <span class="line-card__title">{{ ln.display_name }}</span>
-
-                <!-- быстрые настройки -->
-                <label class="line-card__quick" style="cursor:pointer">
-                  <input type="checkbox" class="form-input" v-model="cfg.board.lines[i].enabled">
-                  Показывать
-                </label>
-                <div class="line-card__quick">
-                  <span style="color:#757575">Цвет</span>
-                  <input type="color" class="color-pick"
-                         :value="argbToHex(cfg.board.lines[i].color)"
-                         @input="cfg.board.lines[i].color = hexToArgb($event.target.value, cfg.board.lines[i].color)">
-                  <input class="form-input" v-model="cfg.board.lines[i].color" list="colors" style="width:9em">
-                </div>
-
-                <!-- сводка расширенных настроек -->
-                <span class="th-badge grad" v-if="cfg.board.lines[i].smooth">
-                  <i class="q-icon notranslate material-icons" style="font-size:13px">gradient</i>
-                  Плавный градиент
-                </span>
-                <span class="th-badge" v-else-if="cfg.board.lines[i].threshold">
-                  <i class="q-icon notranslate material-icons" style="font-size:13px">warning_amber</i>
-                  порог {{ cfg.board.lines[i].threshold.op }} {{ cfg.board.lines[i].threshold.value }}
-                </span>
-
-                <button class="icon-btn" @click="openLineModal(i)" title="Настроить показатель" type="button">
-                  <i class="q-icon notranslate material-icons" style="font-size:20px">tune</i>
-                </button>
-              </div>
+            <div style="overflow-x:auto">
+              <table class="lines-table">
+                <thead>
+                  <tr>
+                    <th>Показывать</th>
+                    <th>Показатель</th>
+                    <th>Цвет</th>
+                    <th>Яркость</th>
+                    <th>Порог</th>
+                    <th>Условие</th>
+                    <th>Цвет порога</th>
+                    <th>Красить</th>
+                    <th title="Плавный градиент: красный→оранжевый→зелёный относительно порога">Плавное</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(ln, i) in linesWithMeta" :key="ln.key">
+                    <td><input type="checkbox" class="form-input" v-model="cfg.board.lines[i].enabled"></td>
+                    <td style="font-weight:500">{{ ln.display_name }}</td>
+                    <td>
+                      <div style="display:flex;gap:4px;align-items:center">
+                        <input class="form-input" v-model="cfg.board.lines[i].color" list="colors" style="width:11em">
+                        <input type="color" class="color-pick"
+                               :value="argbToHex(cfg.board.lines[i].color)"
+                               @input="cfg.board.lines[i].color = hexToArgb($event.target.value, cfg.board.lines[i].color)">
+                      </div>
+                    </td>
+                    <td>
+                      <input type="number" class="form-input" v-model.number="cfg.board.lines[i].brightness" min="0" max="255" style="width:4.5em">
+                    </td>
+                    <td>
+                      <input type="number" class="form-input"
+                             :value="cfg.board.lines[i].threshold?.value ?? ''"
+                             @input="setThreshold(i,'value',$event.target.value)"
+                             placeholder="—">
+                    </td>
+                    <td>
+                      <select class="form-input"
+                              :value="cfg.board.lines[i].threshold?.op ?? '>='"
+                              @change="setThreshold(i,'op',$event.target.value)">
+                        <option>>=</option><option>></option>
+                        <option><=</option><option><</option>
+                        <option>==</option>
+                      </select>
+                    </td>
+                    <td>
+                      <div style="display:flex;gap:4px;align-items:center">
+                        <input class="form-input"
+                               :value="cfg.board.lines[i].threshold?.color ?? '0xffff0000'"
+                               @input="setThreshold(i,'color',$event.target.value)"
+                               list="colors" style="width:11em">
+                        <input type="color" class="color-pick"
+                               :value="argbToHex(cfg.board.lines[i].threshold?.color ?? '0xffff0000')"
+                               @input="setThreshold(i,'color',$event.target.value.replace('#','0xff'))">
+                      </div>
+                    </td>
+                    <td>
+                      <select class="form-input"
+                              :value="cfg.board.lines[i].threshold?.target ?? 'line'"
+                              @change="setThreshold(i,'target',$event.target.value)">
+                        <option value="line">строку</option>
+                        <option value="value">число</option>
+                      </select>
+                    </td>
+                    <td style="text-align:center">
+                      <input type="checkbox" class="form-input"
+                             v-model="cfg.board.lines[i].smooth"
+                             :title="cfg.board.lines[i].smooth ? 'Градиент активен — цвет строки и цвет порога игнорируются' : 'Включить плавный градиент цвета'">
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
 
-        <!-- Base brightness -->
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
             <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
@@ -640,7 +424,6 @@ input[type=color].color-pick {
           </div>
         </div>
 
-        <!-- save row -->
         <div class="row" style="gap:12px;margin-bottom:24px">
           <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
                   :disabled="saving" @click="save" type="button">
@@ -659,20 +442,6 @@ input[type=color].color-pick {
               Сохранить и применить
             </span>
           </button>
-          <button v-if="hasDraft"
-                  class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                  style="border:1px solid #757575;color:#757575;background:transparent"
-                  @click="discardDraft" type="button">
-            <span class="q-focus-helper" tabindex="-1"></span>
-            <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
-              <i class="q-icon notranslate material-icons" style="font-size:16px">undo</i>
-              Сбросить черновик
-            </span>
-          </button>
-          <span v-if="hasDraft" class="row items-center" style="gap:4px;font-size:12px;color:#f2c037">
-            <i class="q-icon notranslate material-icons" style="font-size:16px">edit_note</i>
-            Есть несохранённые изменения
-          </span>
         </div>
 
       </template>
@@ -680,315 +449,6 @@ input[type=color].color-pick {
     </main>
   </div>
 
-  <!-- ══ Модальное окно: конструктор показателя ══ -->
-  <div class="modal-backdrop" v-if="modalIndex !== null && cfg" @click.self="closeLineModal">
-    <div class="modal">
-      <div class="modal__head">
-        <span class="modal__title">Настройка показателя — {{ modalLine.display_name }}</span>
-        <button class="icon-btn" @click="closeLineModal" title="Закрыть" type="button">
-          <i class="q-icon notranslate material-icons">close</i>
-        </button>
-      </div>
-      <div class="modal__body">
-        <div class="modal__section-title">Основное</div>
-        <div class="form-row">
-          <label class="form-label" style="cursor:pointer">
-            <input type="checkbox" class="form-input" v-model="cfg.board.lines[modalIndex].enabled">
-            Показывать на табло
-          </label>
-        </div>
-        <div class="form-row">
-          <span class="form-label">Цвет</span>
-          <input class="form-input" v-model="cfg.board.lines[modalIndex].color" list="colors" style="width:12em">
-          <input type="color" class="color-pick"
-                 :value="argbToHex(cfg.board.lines[modalIndex].color)"
-                 @input="cfg.board.lines[modalIndex].color = hexToArgb($event.target.value, cfg.board.lines[modalIndex].color)">
-        </div>
-        <div class="form-row">
-          <span class="form-label">Яркость</span>
-          <input type="range" min="0" max="255" step="1"
-                 v-model.number="cfg.board.lines[modalIndex].brightness" style="width:160px;cursor:pointer">
-          <input type="number" class="form-input" v-model.number="cfg.board.lines[modalIndex].brightness"
-                 min="0" max="255" style="width:4.5em">
-        </div>
-        <div class="form-row">
-          <label class="form-label" style="cursor:pointer;min-width:0">
-            <input type="checkbox" class="form-input" v-model="cfg.board.lines[modalIndex].smooth">
-            Плавный градиент (красный→жёлтый→зелёный)
-          </label>
-        </div>
-        <div v-if="cfg.board.lines[modalIndex].smooth" style="font-size:12px;color:#9e9e9e;padding:0 0 4px">
-          При включённом градиенте цвет показателя и цвет порога игнорируются — оттенок вычисляется по значению относительно порога.
-        </div>
-
-        <div class="modal__section-title">Порог</div>
-        <div class="form-row">
-          <span class="form-label">Значение</span>
-          <input type="number" class="form-input"
-                 :value="cfg.board.lines[modalIndex].threshold?.value ?? ''"
-                 @input="setThreshold(modalIndex,'value',$event.target.value)"
-                 placeholder="нет порога">
-          <select class="form-input"
-                  :value="cfg.board.lines[modalIndex].threshold?.op ?? '>='"
-                  @change="setThreshold(modalIndex,'op',$event.target.value)">
-            <option>>=</option><option>></option>
-            <option><=</option><option><</option>
-            <option>==</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <span class="form-label">Цвет порога</span>
-          <input class="form-input"
-                 :value="cfg.board.lines[modalIndex].threshold?.color ?? '0xffff0000'"
-                 @input="setThreshold(modalIndex,'color',$event.target.value)"
-                 list="colors" style="width:12em">
-          <input type="color" class="color-pick"
-                 :value="argbToHex(cfg.board.lines[modalIndex].threshold?.color ?? '0xffff0000')"
-                 @input="setThreshold(modalIndex,'color',$event.target.value.replace('#','0xff'))">
-        </div>
-        <div class="form-row">
-          <span class="form-label">Красить</span>
-          <select class="form-input"
-                  :value="cfg.board.lines[modalIndex].threshold?.target ?? 'line'"
-                  @change="setThreshold(modalIndex,'target',$event.target.value)">
-            <option value="line">строку</option>
-            <option value="value">число</option>
-          </select>
-        </div>
-      </div>
-      <div class="modal__foot">
-        <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                @click="closeLineModal" type="button">
-          <span class="q-focus-helper" tabindex="-1"></span>
-          <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
-            <i class="q-icon notranslate material-icons" style="font-size:16px">check</i>
-            Готово
-          </span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ Модальное окно: конструктор показателей ══ -->
-  <div class="modal-backdrop" v-if="eventModalOpen" @click.self="closeEventModal">
-    <div class="modal modal--wide">
-      <div class="modal__head">
-        <span class="modal__title">Конструктор показателей</span>
-        <div class="row items-center" style="gap:4px">
-          <button class="icon-btn" @click="loadCatalog" title="Обновить" type="button">
-            <i class="q-icon notranslate material-icons">refresh</i>
-          </button>
-          <button class="icon-btn" @click="closeEventModal" title="Закрыть" type="button">
-            <i class="q-icon notranslate material-icons">close</i>
-          </button>
-        </div>
-      </div>
-      <div class="modal__body">
-        <div v-if="!catalog" style="padding:24px;text-align:center;color:#9e9e9e">Загрузка…</div>
-        <template v-else>
-
-          <!-- ─── Показатели ─── -->
-          <div class="row items-center justify-between" style="margin-top:2px">
-            <div class="modal__section-title" style="margin:0">Показатели</div>
-            <button class="link-btn" v-if="!createForm" @click="openCreate()" type="button">+ Создать показатель</button>
-          </div>
-
-          <!-- форма создания нового показателя -->
-          <div class="add-form" v-if="createForm" style="margin-top:8px">
-            <div style="font-weight:500;font-size:13px">Новый показатель</div>
-            <div class="form-row">
-              <span class="form-label">Название</span>
-              <input class="form-input" v-model="createForm.display_name" placeholder="напр. Транспорт за день" style="flex:1;min-width:0">
-            </div>
-            <div class="form-row">
-              <span class="form-label">Ключ</span>
-              <input class="form-input" v-model="createForm.key" placeholder="latin_key" style="font-family:monospace;width:14em">
-            </div>
-            <div class="form-row">
-              <span class="form-label">Тип</span>
-              <select class="form-input" v-model="createForm.kind">
-                <option value="daily">за день (сброс в полночь)</option>
-                <option value="gauge">текущее (переносится между днями)</option>
-              </select>
-            </div>
-            <div class="modal__section-title" style="margin:8px 0 0">Привязать запрос (необязательно)</div>
-            <div class="form-row">
-              <span class="form-label">Тип запроса</span>
-              <input class="form-input" v-model="createForm.event_type" list="evt-types" placeholder="event_type" style="flex:1;min-width:0">
-              <span style="font-size:13px;color:#757575">Операция</span>
-              <select class="form-input" v-model="createForm.op">
-                <option value="inc">+value</option><option value="dec">−value</option><option value="set">=value</option>
-              </select>
-              <span style="font-size:13px;color:#757575">Точка</span>
-              <input class="form-input" v-model="createForm.checkpoint" placeholder="любая" style="width:7em">
-            </div>
-            <div class="row" style="gap:8px">
-              <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                      :disabled="savingEvent || !createForm.key || !createForm.display_name" @click="submitCreate" type="button">
-                <span class="q-focus-helper" tabindex="-1"></span>
-                <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
-                  <i class="q-icon notranslate material-icons" :class="{ spin: savingEvent }" style="font-size:16px">{{ savingEvent ? 'sync' : 'check' }}</i>
-                  Создать
-                </span>
-              </button>
-              <button class="link-btn" @click="createForm=null" type="button">Отмена</button>
-            </div>
-          </div>
-
-          <div v-if="!catalog.indicators.length" style="padding:10px 0;color:#9e9e9e;font-size:13px">Показателей пока нет.</div>
-          <div class="evt-list">
-            <div class="evt-row" v-for="ind in catalog.indicators" :key="ind.key">
-              <div class="evt-head">
-                <span style="font-weight:600;font-size:14px">{{ ind.display_name }}</span>
-                <span style="font-family:monospace;font-size:12px;color:#9e9e9e">{{ ind.key }}</span>
-                <span class="th-badge badge-configured">{{ ind.kind==='daily' ? 'за день' : 'текущее' }}</span>
-                <span class="th-badge" :class="indStatus(ind)==='displayed' ? 'badge-displayed' : 'badge-none'">
-                  {{ indStatus(ind)==='displayed' ? 'выводится' : 'скрыт' }}
-                </span>
-                <button class="link-btn danger" style="margin-left:auto"
-                        @click="deleteIndicator(ind.key, ind.display_name)" type="button">удалить</button>
-              </div>
-
-              <!-- привязанные запросы (триггеры) -->
-              <div class="evt-map" v-for="t in (triggersByIndicator[ind.key] || [])" :key="t.event_type">
-                <i class="q-icon notranslate material-icons">bolt</i>
-                <span style="font-family:monospace">{{ t.event_type }}</span>
-                <span style="color:#757575">({{ opLabel(t.op) }}<template v-if="t.checkpoint">, {{ t.checkpoint }}</template>)</span>
-                <button class="link-btn" @click="detachRule(t.event_type, ind.key)" type="button">отвязать</button>
-              </div>
-              <div v-if="!(triggersByIndicator[ind.key] || []).length"
-                   style="font-size:12px;color:#9e9e9e">
-                Нет привязанных запросов — значение меняется вручную (±) или через API.
-              </div>
-
-              <!-- форма привязки запроса к этому показателю -->
-              <div class="add-form" v-if="bindForm && bindForm.indicator_locked && bindForm.indicator_key===ind.key">
-                <div class="form-row">
-                  <span class="form-label">Тип запроса</span>
-                  <input class="form-input" v-model="bindForm.event_type" list="evt-types" placeholder="event_type" style="flex:1;min-width:0">
-                  <span style="font-size:13px;color:#757575">Операция</span>
-                  <select class="form-input" v-model="bindForm.op">
-                    <option value="inc">+value</option><option value="dec">−value</option><option value="set">=value</option>
-                  </select>
-                  <span style="font-size:13px;color:#757575">Точка</span>
-                  <input class="form-input" v-model="bindForm.checkpoint" placeholder="любая" style="width:7em">
-                </div>
-                <div class="row" style="gap:8px">
-                  <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                          :disabled="savingEvent || !bindForm.event_type" @click="submitBind" type="button">
-                    <span class="q-focus-helper" tabindex="-1"></span>
-                    <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
-                      <i class="q-icon notranslate material-icons" :class="{ spin: savingEvent }" style="font-size:16px">{{ savingEvent ? 'sync' : 'add_link' }}</i>
-                      Привязать
-                    </span>
-                  </button>
-                  <button class="link-btn" @click="bindForm=null" type="button">Отмена</button>
-                </div>
-              </div>
-              <button v-else
-                      class="link-btn" @click="openTrigger(ind)" type="button">+ Привязать запрос</button>
-            </div>
-          </div>
-
-          <!-- ─── Необработанные запросы ─── -->
-          <div class="modal__section-title">Необработанные запросы</div>
-          <div v-if="!unmappedRequests.length" style="font-size:13px;color:#9e9e9e;padding:2px 0">
-            Все приходящие запросы привязаны к показателям.
-          </div>
-          <div class="evt-list" v-else>
-            <div class="evt-row" v-for="ev in unmappedRequests" :key="ev.event_type">
-              <div class="evt-head">
-                <span class="evt-type">{{ ev.event_type }}</span>
-                <span class="th-badge badge-unhandled">не привязан</span>
-                <span class="evt-meta">
-                  <template v-if="ev.object_type">{{ ev.object_type }}</template>
-                  <template v-if="ev.checkpoint"> · {{ ev.checkpoint }}</template>
-                  <template v-if="ev.count"> · принято {{ ev.count }}</template>
-                </span>
-                <button class="icon-btn" style="margin-left:auto;width:26px;height:26px"
-                        @click="dismissEvent(ev.event_type)" title="Убрать из реестра" type="button">
-                  <i class="q-icon notranslate material-icons" style="font-size:16px">delete_outline</i>
-                </button>
-              </div>
-
-              <!-- форма привязки запроса к существующему показателю -->
-              <div class="add-form" v-if="bindForm && bindForm.event_locked && bindForm.event_type===ev.event_type">
-                <div class="form-row">
-                  <span class="form-label">Показатель</span>
-                  <select class="form-input" v-model="bindForm.indicator_key" style="flex:1;min-width:0">
-                    <option v-for="ind in catalog.indicators" :key="ind.key" :value="ind.key">{{ ind.display_name }}</option>
-                  </select>
-                  <span style="font-size:13px;color:#757575">Операция</span>
-                  <select class="form-input" v-model="bindForm.op">
-                    <option value="inc">+value</option><option value="dec">−value</option><option value="set">=value</option>
-                  </select>
-                </div>
-                <div class="row" style="gap:8px">
-                  <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle bg-primary text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                          :disabled="savingEvent || !bindForm.indicator_key" @click="submitBind" type="button">
-                    <span class="q-focus-helper" tabindex="-1"></span>
-                    <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
-                      <i class="q-icon notranslate material-icons" :class="{ spin: savingEvent }" style="font-size:16px">{{ savingEvent ? 'sync' : 'add_link' }}</i>
-                      Привязать
-                    </span>
-                  </button>
-                  <button class="link-btn" @click="bindForm=null" type="button">Отмена</button>
-                </div>
-              </div>
-              <div v-else class="row" style="gap:14px">
-                <button class="link-btn" :disabled="!catalog.indicators.length" @click="openBind(ev)" type="button">Привязать к показателю</button>
-                <button class="link-btn" @click="openCreate(ev)" type="button">Создать показатель</button>
-              </div>
-            </div>
-          </div>
-
-        </template>
-      </div>
-    </div>
-  </div>
-
-  <datalist id="evt-types">
-    <option v-for="t in eventTypeList" :key="t" :value="t"></option>
-  </datalist>
-
-  <!-- ══ Модальное окно: подтверждение ══ -->
-  <div class="modal-backdrop" style="z-index:2100" v-if="confirmState" @click.self="confirmNo">
-    <div class="modal" style="width:440px">
-      <div class="modal__head">
-        <span class="modal__title row items-center" style="gap:8px">
-          <i class="q-icon notranslate material-icons" :style="{ color: confirmState.danger ? '#c10015' : 'var(--q-primary)' }">
-            {{ confirmState.danger ? 'warning' : 'help_outline' }}
-          </i>
-          {{ confirmState.title }}
-        </span>
-        <button class="icon-btn" @click="confirmNo" title="Отмена" type="button">
-          <i class="q-icon notranslate material-icons">close</i>
-        </button>
-      </div>
-      <div class="modal__body">
-        <div style="font-size:14px;color:#424242;line-height:1.5">{{ confirmState.message }}</div>
-      </div>
-      <div class="modal__foot">
-        <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                style="border:1px solid #bdbdbd;color:#616161;background:transparent"
-                @click="confirmNo" type="button">
-          <span class="q-focus-helper" tabindex="-1"></span>
-          <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row">Отмена</span>
-        </button>
-        <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle text-white q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                :style="{ background: confirmState.danger ? '#c10015' : 'var(--q-primary)' }"
-                @click="confirmYes" type="button">
-          <span class="q-focus-helper" tabindex="-1"></span>
-          <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:6px">
-            <i class="q-icon notranslate material-icons" style="font-size:16px">{{ confirmState.danger ? 'delete' : 'check' }}</i>
-            {{ confirmState.confirmLabel }}
-          </span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ Toasts ══ -->
   <div class="toast-area">
     <div class="toast" :class="t.cls" v-for="t in toasts" :key="t.id">
       <i class="q-icon notranslate material-icons" style="font-size:18px">{{ t.icon }}</i>
@@ -998,7 +458,6 @@ input[type=color].color-pick {
 
 </div>
 
-<!-- datalists -->
 <datalist id="fonts">
   <option value="DigifaceWide"></option>
   <option value="Arial"></option>
@@ -1020,621 +479,6 @@ input[type=color].color-pick {
 </datalist>
 
 <script src="https://cdn.jsdelivr.net/npm/vue@3.4.0/dist/vue.global.prod.js"></script>
-<script>
-const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-
-createApp({
-  setup() {
-    /* ── localStorage: сохранение конфигурации редактора между сессиями ── */
-    const UI_KEY    = 'tablo.editor.ui';     // состояние интерфейса редактора
-    const DRAFT_KEY = 'tablo.editor.draft';  // несохранённый черновик правок табло
-    const LS = {
-      get(key) {
-        try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
-        catch { return null; }
-      },
-      set(key, val) {
-        try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* quota / private mode */ }
-      },
-      remove(key) {
-        try { localStorage.removeItem(key); } catch { /* ignore */ }
-      },
-    };
-    const savedUI = LS.get(UI_KEY) || {};
-
-    /* ── sidebar ── */
-    const mini   = ref(savedUI.mini   ?? false);
-    const devOpen = ref(savedUI.devOpen ?? true);
-    const repOpen = ref(savedUI.repOpen ?? false);
-
-    const BASE = window.location.origin;
-
-    const topNav = [
-      { icon:'vertical_split', label:'Панель наблюдения',  href: BASE + '/monitoring' },
-      { icon:'event',          label:'Журнал событий',     href: BASE + '/events' },
-      { icon:'inventory_2',    label:'Архив',              href: BASE + '/archive' },
-      { icon:'display_settings',label:'Конструктор',       href: BASE + '/builder/configs' },
-    ];
-    const devNav = [
-      { icon:'video_call',  label:'Камеры',                      href: BASE + '/cameras' },
-      { icon:'speaker',     label:'Громкоговорители',            href: BASE + '/loudspeakers' },
-      { icon:'devices',     label:'Исполнительные устройства',   href: BASE + '/executive-devices' },
-      { icon:'place',       label:'Локации',                     href: BASE + '/locations' },
-      { icon:'monitor',     label:'Информационные табло',        href: '#', active: true },
-    ];
-    const repNav = [
-      { icon:'terminal',      label:'Журнал действий',    href: BASE + '/activity-log' },
-      { icon:'terminal',      label:'Журнал изменений',   href: BASE + '/changes-log' },
-      { icon:'switch_account',label:'Журнал авторизаций', href: BASE + '/login-attempt' },
-      { icon:'event_note',    label:'Отчет по событиям',  href: BASE + '/events-report' },
-    ];
-    const bottomNav = [
-      { icon:'domain',            label:'Подразделения', href: BASE + '/companies' },
-      { icon:'person',            label:'Пользователи',  href: BASE + '/users' },
-      { icon:'domain_verification',label:'Лицензии',     href: BASE + '/license' },
-      { icon:'lan',               label:'Диагностика',   href: BASE + '/diagnostics' },
-      { icon:'code',              label:'О системе',     href: BASE + '/version' },
-    ];
-
-    /* ── state ── */
-    const tab       = ref(savedUI.tab ?? 'overview');
-    const cfg       = ref(null);   // {board, indicators, device}
-    const stateData = ref(null);   // /api/state
-    const status    = ref(null);   // /api/tablo/status
-    const saving      = ref(false);
-    const pushing     = ref(false);
-    const clearing    = ref(false);
-    const adjustStep  = ref(savedUI.adjustStep ?? 10);
-    const cvs         = ref(null);   // canvas ref
-    const hasDraft    = ref(false);  // есть несохранённый черновик правок
-    let   baseline    = null;        // JSON серверной (сохранённой) конфигурации
-    const dragIndex     = ref(null); // индекс перетаскиваемой карточки
-    const dragOverIndex = ref(null); // индекс карточки под курсором при D&D
-    const modalIndex    = ref(null); // индекс показателя, открытого в конструкторе
-    const eventModalOpen = ref(false); // открыт ли конструктор показателей
-    const catalog        = ref(null);  // каталог /api/event-catalog
-    const savingEvent    = ref(false); // идёт создание/привязка
-    const createForm     = ref(null);  // форма создания нового показателя
-    const bindForm       = ref(null);  // форма привязки запроса к показателю
-    const confirmState   = ref(null);  // диалог подтверждения {title,message,confirmLabel,danger,resolve}
-
-    /* ── computed: status card ── */
-    const connDot = computed(() => {
-      if (!status.value) return 'dot-grey';
-      if (!status.value.reachable) return 'dot-err';
-      if (!status.value.connected) return 'dot-warn';
-      return 'dot-ok';
-    });
-    const connLabel = computed(() => {
-      if (!status.value) return 'Проверка...';
-      if (!status.value.reachable) return 'Нет связи со шлюзом';
-      if (!status.value.connected) return 'Шлюз доступен, матрица не подключена';
-      const d = status.value.device || {};
-      return 'Подключено';
-    });
-    const statusDetail = computed(() => status.value?.url || '');
-    const lastPushLine = computed(() => {
-      const lp = status.value?.last_push;
-      if (!lp?.at) return '';
-      return lp.ok
-        ? `Последняя доставка: OK в ${lp.at}`
-        : `Последняя доставка: ОШИБКА в ${lp.at} — ${lp.error}`;
-    });
-    const deviceLabel = computed(() => {
-      const d = cfg.value?.device;
-      return d ? `${d.width} × ${d.height} px` : '256 × 96 px';
-    });
-
-    /* ── computed: lines with display_name ── */
-    const linesWithMeta = computed(() => {
-      if (!cfg.value) return [];
-      const byKey = {};
-      (cfg.value.indicators || []).forEach(ind => { byKey[ind.key] = ind; });
-      return (cfg.value.board.lines || []).map(ln => ({
-        ...ln,
-        display_name: byKey[ln.key]?.display_name || ln.key,
-      }));
-    });
-
-    /* ── показатель, открытый в модальном конструкторе ── */
-    const modalLine = computed(() => {
-      if (modalIndex.value === null) return {};
-      return linesWithMeta.value[modalIndex.value] || {};
-    });
-
-    /* ── drag & drop: порядок показателей ── */
-    const onDragStart = (i, e) => {
-      dragIndex.value = i;
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'move';
-        const card = e.target.closest('.line-card');
-        if (card) e.dataTransfer.setDragImage(card, 20, 20);
-      }
-    };
-    const onDragOver = (i) => { dragOverIndex.value = i; };
-    const onDragEnd  = () => { dragIndex.value = null; dragOverIndex.value = null; };
-    const onDrop = (i) => {
-      const from = dragIndex.value;
-      dragIndex.value = null;
-      dragOverIndex.value = null;
-      if (from === null || from === i || !cfg.value) return;
-      const lines = cfg.value.board.lines;
-      const [moved] = lines.splice(from, 1);
-      lines.splice(i, 0, moved);
-    };
-
-    /* ── модальный конструктор показателя ── */
-    const openLineModal  = (i) => { modalIndex.value = i; };
-    const closeLineModal = () => { modalIndex.value = null; };
-
-    /* ── диалог подтверждения (вместо window.confirm) ── */
-    const askConfirm = (opts) => new Promise((resolve) => {
-      confirmState.value = {
-        title: opts.title || 'Подтверждение',
-        message: opts.message || '',
-        confirmLabel: opts.confirmLabel || 'Подтвердить',
-        danger: opts.danger !== false,
-        resolve,
-      };
-    });
-    const _confirmResolve = (val) => {
-      const st = confirmState.value;
-      confirmState.value = null;
-      if (st) st.resolve(val);
-    };
-    const confirmYes = () => _confirmResolve(true);
-    const confirmNo = () => _confirmResolve(false);
-
-    /* ── конструктор показателей ── */
-    const slugify = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-    const opLabel = (op) => ({ inc: '+', dec: '−', set: '=' }[op] || op);
-    const indStatus = (ind) => (ind.enabled && ind.line_enabled) ? 'displayed' : 'hidden';
-
-    // запросы (event_type), привязанные к каждому показателю
-    const triggersByIndicator = computed(() => {
-      const map = {};
-      for (const ev of (catalog.value?.events || []))
-        for (const m of ev.mappings)
-          (map[m.indicator_key] = map[m.indicator_key] || []).push(
-            { event_type: ev.event_type, op: m.op, checkpoint: m.checkpoint });
-      return map;
-    });
-    // приходящие запросы, не привязанные ни к одному показателю
-    const unmappedRequests = computed(() =>
-      (catalog.value?.events || []).filter(e => e.status === 'unhandled'));
-    const eventTypeList = computed(() =>
-      (catalog.value?.events || []).map(e => e.event_type));
-
-    const loadCatalog = async () => {
-      try {
-        const r = await fetch('/api/event-catalog');
-        catalog.value = await r.json();
-      } catch (e) { toast('err', 'Ошибка каталога: ' + e.message); }
-    };
-    const openEventModal = async () => {
-      eventModalOpen.value = true;
-      catalog.value = null;
-      createForm.value = null;
-      bindForm.value = null;
-      await loadCatalog();
-    };
-    const closeEventModal = () => {
-      eventModalOpen.value = false;
-      createForm.value = null;
-      bindForm.value = null;
-    };
-
-    const refreshAll = async () => {
-      await loadCatalog();
-      await loadConfig();
-      await loadState();
-      if (tab.value === 'overview') await loadPreview();
-    };
-
-    const _post = async (url, body) => {
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        let msg = 'HTTP ' + r.status;
-        try { msg = (await r.json()).message || msg; } catch {}
-        throw new Error(msg);
-      }
-    };
-
-    // создание нового показателя (с необязательной привязкой запроса)
-    const openCreate = (ev) => {
-      createForm.value = {
-        display_name: ev ? ev.event_type : '',
-        key: ev ? slugify(ev.event_type) : '',
-        kind: 'daily',
-        event_type: ev ? ev.event_type : '',
-        checkpoint: ev ? (ev.checkpoint || '') : '',
-        op: 'inc',
-      };
-      bindForm.value = null;
-    };
-    const submitCreate = async () => {
-      const f = createForm.value;
-      if (!f) return;
-      savingEvent.value = true;
-      try {
-        const body = { key: f.key, display_name: f.display_name, kind: f.kind };
-        if (f.event_type) body.rule = { event_type: f.event_type, checkpoint: f.checkpoint || null, op: f.op };
-        await _post('/api/indicators', body);
-        toast('ok', 'Показатель создан');
-        createForm.value = null;
-        await refreshAll();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-      finally { savingEvent.value = false; }
-    };
-
-    // привязка запроса к показателю — из карточки показателя или из списка запросов
-    const openTrigger = (ind) => {
-      bindForm.value = { indicator_key: ind.key, indicator_locked: true,
-                         event_type: '', event_locked: false, checkpoint: '', op: 'inc' };
-      createForm.value = null;
-    };
-    const openBind = (ev) => {
-      bindForm.value = { indicator_key: catalog.value?.indicators[0]?.key || '', indicator_locked: false,
-                         event_type: ev.event_type, event_locked: true, checkpoint: ev.checkpoint || '', op: 'inc' };
-      createForm.value = null;
-    };
-    const submitBind = async () => {
-      const f = bindForm.value;
-      if (!f || !f.event_type || !f.indicator_key) { toast('err', 'Укажите показатель и тип запроса'); return; }
-      savingEvent.value = true;
-      try {
-        await _post('/api/event-rules', { event_type: f.event_type, checkpoint: f.checkpoint || null,
-                                          indicator_key: f.indicator_key, op: f.op });
-        toast('ok', 'Запрос привязан');
-        bindForm.value = null;
-        await refreshAll();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-      finally { savingEvent.value = false; }
-    };
-
-    const detachRule = async (event_type, indicator_key) => {
-      try {
-        const url = '/api/event-rules?event_type=' + encodeURIComponent(event_type) +
-                    '&indicator_key=' + encodeURIComponent(indicator_key);
-        const r = await fetch(url, { method: 'DELETE' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        toast('ok', 'Правило отвязано');
-        await refreshAll();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-    };
-
-    const deleteIndicator = async (key, name) => {
-      const ok = await askConfirm({
-        title: 'Удалить показатель',
-        message: 'Показатель «' + name + '» будет удалён вместе с его правилами и историей значений. Действие необратимо.',
-        confirmLabel: 'Удалить',
-        danger: true,
-      });
-      if (!ok) return;
-      try {
-        const r = await fetch('/api/indicators/' + encodeURIComponent(key), { method: 'DELETE' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        toast('ok', 'Показатель удалён');
-        await refreshAll();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-    };
-
-    const dismissEvent = async (event_type) => {
-      try {
-        const r = await fetch('/api/event-catalog/' + encodeURIComponent(event_type), { method: 'DELETE' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        await loadCatalog();
-      } catch (e) { toast('err', 'Ошибка: ' + e.message); }
-    };
-
-    const onKeydown = (e) => {
-      if (e.key !== 'Escape') return;
-      if (confirmState.value) confirmNo();
-      else if (modalIndex.value !== null) closeLineModal();
-      else if (eventModalOpen.value) closeEventModal();
-    };
-
-    /* ── API calls ── */
-    const loadConfig = async () => {
-      try {
-        const r = await fetch('/api/display/config');
-        cfg.value = await r.json();
-        // Эталон = конфигурация, сохранённая на сервере
-        baseline = JSON.stringify(cfg.value.board);
-        // Восстанавливаем несохранённый черновик, если он отличается от серверного
-        const draft = LS.get(DRAFT_KEY);
-        if (draft && JSON.stringify(draft) !== baseline) {
-          cfg.value.board = draft;
-          hasDraft.value = true;
-          toast('ok', 'Восстановлен черновик несохранённых правок');
-        } else {
-          LS.remove(DRAFT_KEY);
-          hasDraft.value = false;
-        }
-      } catch (e) { toast('err', 'Ошибка загрузки конфига: ' + e.message); }
-    };
-
-    /* Откатить черновик к сохранённой на сервере конфигурации */
-    const discardDraft = () => {
-      if (!cfg.value || baseline === null) return;
-      cfg.value.board = JSON.parse(baseline);
-      LS.remove(DRAFT_KEY);
-      hasDraft.value = false;
-      toast('ok', 'Черновик сброшен');
-    };
-
-    const loadState = async () => {
-      try {
-        const r = await fetch('/api/state');
-        stateData.value = await r.json();
-      } catch { /* silent */ }
-    };
-
-    const loadStatus = async () => {
-      try {
-        const r = await fetch('/api/tablo/status');
-        status.value = await r.json();
-      } catch { /* silent */ }
-    };
-
-    const loadPreview = async () => {
-      try {
-        const r = await fetch('/api/display/preview');
-        const p = await r.json();
-        await nextTick();
-        drawCanvas(p);
-      } catch (e) { toast('err', 'Ошибка превью: ' + e.message); }
-    };
-
-    const save = async () => {
-      if (!cfg.value) return;
-      saving.value = true;
-      try {
-        const r = await fetch('/api/display/config', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cfg.value.board),
-        });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const data = await r.json();
-        cfg.value.board = data.board;
-        // Сохранено на сервере → черновик больше не нужен
-        baseline = JSON.stringify(data.board);
-        LS.remove(DRAFT_KEY);
-        hasDraft.value = false;
-        toast('ok', 'Настройки сохранены');
-        if (tab.value === 'overview') await loadPreview();
-      } catch (e) { toast('err', 'Ошибка сохранения: ' + e.message); }
-      finally { saving.value = false; }
-    };
-
-    const pushNow = async () => {
-      pushing.value = true;
-      try {
-        const r = await fetch('/api/display/push', { method: 'POST' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        toast('ok', 'Отправлено на табло');
-        await loadStatus();
-      } catch (e) { toast('err', 'Ошибка отправки: ' + e.message); }
-      finally { pushing.value = false; }
-    };
-
-    const saveAndPush = async () => {
-      await save();
-      await pushNow();
-    };
-
-    const clearBoard = async () => {
-      clearing.value = true;
-      try {
-        const r = await fetch('/api/display/clear', { method: 'POST' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        toast('ok', 'Экран очищен');
-      } catch (e) { toast('err', 'Ошибка очистки: ' + e.message); }
-      finally { clearing.value = false; }
-    };
-
-    const reconnect = async () => {
-      try {
-        await fetch('/api/tablo/reconnect', { method: 'POST' });
-        await loadStatus();
-        toast('ok', 'Команда переподключения отправлена');
-      } catch (e) { toast('err', 'Ошибка переподключения: ' + e.message); }
-    };
-
-    /* ── Color helpers: 0xAARRGGBB <-> #RRGGBB ── */
-    const argbToHex = (argb) => {
-      const m = /^0x[0-9a-f]{2}([0-9a-f]{6})$/i.exec(argb || '');
-      return m ? '#' + m[1] : '#ffffff';
-    };
-    const hexToArgb = (hex, current) => {
-      const am = /^0x([0-9a-f]{2})/i.exec(current || '');
-      const alpha = am ? am[1] : 'ff';
-      return '0x' + alpha + hex.replace('#', '').toLowerCase();
-    };
-
-    /* ── Manual adjust ── */
-    const adjust = async (key, delta) => {
-      try {
-        const r = await fetch('/api/state/adjust', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key, delta }),
-        });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const data = await r.json();
-        if (stateData.value) {
-          const ind = stateData.value.indicators.find(i => i.key === key);
-          if (ind) ind.value = data.value;
-        }
-      } catch (e) { toast('err', 'Ошибка корректировки: ' + e.message); }
-    };
-
-    /* ── Screen brightness ── */
-    const setBrightness = async (val) => {
-      try {
-        await fetch('/api/tablo/brightness', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value: val }),
-        });
-      } catch { /* silent */ }
-    };
-
-    /* ── Threshold helper ── */
-    const setThreshold = (i, field, val) => {
-      const ln = cfg.value.board.lines[i];
-      if (!ln.threshold) ln.threshold = { value: null, op: '>=', color: '0xffff0000', target: 'line' };
-      if (field === 'value') {
-        ln.threshold.value = val === '' ? null : Number(val);
-      } else {
-        ln.threshold[field] = val;
-      }
-      if (ln.threshold.value === null) ln.threshold = null;
-    };
-
-    /* ── Canvas drawing ── */
-    function argbToCss(s) {
-      const m = /^0x[0-9a-fA-F]{2}([0-9a-fA-F]{6})$/.exec(s || '');
-      return m ? '#' + m[1] : '#ffffff';
-    }
-
-    function drawCanvas(p) {
-      const c = cvs.value;
-      if (!c) return;
-      const ctx = c.getContext('2d');
-      const dev = cfg.value?.device || {};
-      const bw = dev.width  || 256;
-      const bh = dev.height || 96;
-
-      // 1. Рендер при нативном разрешении матрицы (256×96).
-      //    Размер шрифта совпадает с реальным, текст ведёт себя как на устройстве.
-      const nat = document.createElement('canvas');
-      nat.width = bw; nat.height = bh;
-      const nc = nat.getContext('2d');
-
-      nc.fillStyle = '#080604';
-      nc.fillRect(0, 0, bw, bh);
-
-      // Рамка области шире текста (шрифт панели крупнее экранного), поэтому в
-      // превью прижимаем текст к краю области так же, как на панели: метки —
-      // влево, значения — вправо. Иначе текст «гулял» бы по центру рамки.
-      (p.areas || []).forEach(a => {
-        const x = +a.x, y = +a.y, w = +a.w, h = +a.h;
-        nc.fillStyle = argbToCss(a.fontcolor);
-        nc.font = `${Math.max(4, +a.fontsize)}px ${a.fontname || 'Arial'}`;
-        nc.textBaseline = 'middle';
-        const align = a.align || 'left';
-        let tx;
-        if (align === 'right')       { nc.textAlign = 'right';  tx = x + w; }
-        else if (align === 'center') { nc.textAlign = 'center'; tx = x + w / 2; }
-        else                         { nc.textAlign = 'left';   tx = x; }
-        nc.save();
-        nc.beginPath(); nc.rect(x, y, w, h); nc.clip();
-        nc.fillText(a.msg, tx, y + h / 2);
-        nc.restore();
-      });
-
-      // 2. Масштабирование без сглаживания → каждый пиксель = блок LEDʼа
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(nat, 0, 0, c.width, c.height);
-
-      // 3. Сетка-разделитель между "пикселями" (корпус LED-матрицы)
-      const sx = c.width / bw, sy = c.height / bh;
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      for (let xi = 0; xi < bw; xi++) ctx.fillRect(Math.round(xi * sx + sx - 1), 0, 1, c.height);
-      for (let yi = 0; yi < bh; yi++) ctx.fillRect(0, Math.round(yi * sy + sy - 1), c.width, 1);
-    }
-
-    /* ── watch tab to draw canvas when switching to overview ── */
-    watch(tab, async (val) => {
-      if (val === 'overview') {
-        await nextTick();
-        await loadPreview();
-      }
-    });
-
-    /* ── Сохранение состояния UI редактора между сессиями ── */
-    watch([mini, devOpen, repOpen, tab, adjustStep], () => {
-      LS.set(UI_KEY, {
-        mini: mini.value,
-        devOpen: devOpen.value,
-        repOpen: repOpen.value,
-        tab: tab.value,
-        adjustStep: adjustStep.value,
-      });
-    });
-
-    /* ── Сохранение черновика несохранённых правок табло ── */
-    watch(() => cfg.value && cfg.value.board, (board) => {
-      if (!board || baseline === null) return;
-      if (JSON.stringify(board) === baseline) {
-        // Правки совпали с сохранённой версией → черновик не нужен
-        LS.remove(DRAFT_KEY);
-        hasDraft.value = false;
-      } else {
-        LS.set(DRAFT_KEY, board);
-        hasDraft.value = true;
-      }
-    }, { deep: true });
-
-    /* ── toasts ── */
-    const toasts = ref([]);
-    let _tid = 0;
-    const toast = (cls, msg, ms = 3500) => {
-      const id = ++_tid;
-      const icon = cls === 'ok' ? 'check_circle' : 'error';
-      toasts.value.push({ id, cls, icon, msg });
-      setTimeout(() => {
-        const i = toasts.value.findIndex(t => t.id === id);
-        if (i !== -1) toasts.value.splice(i, 1);
-      }, ms);
-    };
-
-    /* ── lifecycle ── */
-    let t1, t2;
-    onMounted(async () => {
-      window.addEventListener('keydown', onKeydown);
-      await Promise.all([loadConfig(), loadState(), loadStatus()]);
-      await loadPreview();
-      t1 = setInterval(loadState,  10_000);
-      t2 = setInterval(loadStatus, 10_000);
-    });
-    onUnmounted(() => {
-      clearInterval(t1); clearInterval(t2);
-      window.removeEventListener('keydown', onKeydown);
-    });
-
-    return {
-      mini, devOpen, repOpen,
-      topNav, devNav, repNav, bottomNav,
-      tab, cfg, stateData, status,
-      saving, pushing, clearing, adjustStep, cvs,
-      hasDraft, discardDraft,
-      dragIndex, dragOverIndex, modalIndex, modalLine,
-      onDragStart, onDragOver, onDragEnd, onDrop,
-      openLineModal, closeLineModal,
-      eventModalOpen, catalog, savingEvent, createForm, bindForm,
-      confirmState, confirmYes, confirmNo,
-      opLabel, indStatus, triggersByIndicator, unmappedRequests, eventTypeList,
-      openEventModal, closeEventModal, loadCatalog,
-      openCreate, submitCreate, openTrigger, openBind, submitBind,
-      detachRule, deleteIndicator, dismissEvent,
-      connDot, connLabel, statusDetail, lastPushLine, deviceLabel,
-      linesWithMeta,
-      loadConfig, loadState, loadStatus, loadPreview,
-      save, pushNow, saveAndPush, clearBoard, reconnect,
-      adjust, setBrightness,
-      argbToHex, hexToArgb,
-      setThreshold,
-      toasts,
-    };
-  },
-}).mount('#q-app');
-</script>
+<script src="/ui/app.js"></script>
 </body>
 </html>

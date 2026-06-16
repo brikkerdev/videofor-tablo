@@ -20,9 +20,6 @@ EVENTS = [
     ("student_out", "student", None, 2),
     ("instructor_in", "instructor", None, 1),
     ("instructor_out", "instructor", None, 1),
-    # Намеренно без правила: демонстрирует конструктор событий — тип придёт,
-    # ответит 400 и появится в /api/event-catalog как «пришло, не выводится».
-    # Из него создаётся показатель «Транспорт за день» (docs §3.6).
     ("transport", "transport", "TK1", 1),
 ]
 
