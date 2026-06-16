@@ -183,12 +183,19 @@ class TabloClient:
         if not payload:
             return
 
-        for j in range(0, len(payload), BATCH_SIZE):
-            chunk = payload[j : j + BATCH_SIZE]
+        batches: list[list[dict]] = []
+        start = 0
+        if len(payload) % 2 == 1:
+            batches.append(payload[:1])
+            start = 1
+        for j in range(start, len(payload), BATCH_SIZE):
+            batches.append(payload[j : j + BATCH_SIZE])
+
+        for i, chunk in enumerate(batches):
             async with self._req_lock:
                 resp = await self._client.post(self._url("message.json"), json=chunk)
             resp.raise_for_status()
-            if j + BATCH_SIZE < len(payload):
+            if i + 1 < len(batches):
                 await asyncio.sleep(INTER_BATCH_DELAY)
         self._last_max = count - 1 if count else None
 
