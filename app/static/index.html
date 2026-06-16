@@ -446,52 +446,24 @@
       </template>
 
       <template v-if="tab==='connection'">
-        <!-- Статус подключения -->
         <div class="q-card q-mb-md" style="border-radius:4px">
           <div class="q-card__section q-card__section--vert">
-            <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
-              Статус подключения
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <span style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px">Параметры подключения</span>
+              <div class="row items-center" style="gap:4px">
+                <button class="icon-btn" @click="loadStatus" title="Обновить статус" type="button">
+                  <i class="q-icon notranslate material-icons" style="font-size:18px">refresh</i>
+                </button>
+                <button class="icon-btn" @click="reconnect" title="Переподключить" type="button">
+                  <i class="q-icon notranslate material-icons" style="font-size:18px">settings_ethernet</i>
+                </button>
+              </div>
             </div>
-            <div class="form-row">
-              <span class="form-label">Активный URL</span>
-              <span style="font-size:13px;font-family:monospace">{{ status?.url || '—' }}</span>
-            </div>
-            <div class="form-row">
-              <span class="form-label">Матрица</span>
-              <span style="font-size:13px">{{ status?.device ? (status.device.width + '×' + status.device.height + ' px') : '—' }}</span>
-            </div>
-            <div class="form-row">
-              <span class="form-label">Яркость устройства</span>
-              <span style="font-size:13px">{{ status?.device?.brightness ?? '—' }}</span>
-            </div>
-            <div class="row" style="gap:8px;margin-top:16px">
-              <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                      style="border:1px solid var(--q-primary);color:var(--q-primary);background:transparent"
-                      @click="loadStatus" type="button">
-                <span class="q-focus-helper" tabindex="-1"></span>
-                <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:4px">
-                  <i class="q-icon notranslate material-icons" style="font-size:16px">refresh</i>
-                  Обновить статус
-                </span>
-              </button>
-              <button class="q-btn q-btn-item non-selectable no-outline q-btn--standard q-btn--rectangle q-btn--actionable q-focusable q-hoverable q-btn--no-uppercase"
-                      style="border:1px solid #757575;color:#757575;background:transparent"
-                      @click="reconnect" type="button">
-                <span class="q-focus-helper" tabindex="-1"></span>
-                <span class="q-btn__content text-center col items-center q-anchor--skip justify-center row" style="gap:4px">
-                  <i class="q-icon notranslate material-icons" style="font-size:16px">settings_ethernet</i>
-                  Переподключить
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Настройки подключения -->
-        <div class="q-card q-mb-md" style="border-radius:4px">
-          <div class="q-card__section q-card__section--vert">
-            <div style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">
-              Параметры подключения
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:8px 10px;background:#f5f5f5;border-radius:4px;font-size:13px">
+              <span class="dot" :class="connDot"></span>
+              <span>{{ connLabel }}</span>
+              <span v-if="status?.url" style="font-family:monospace;color:#757575;margin-left:4px">{{ status.url }}</span>
+              <span v-if="status?.device" style="color:#9e9e9e">{{ status.device.width }}×{{ status.device.height }} px</span>
             </div>
             <div v-if="connForm" style="display:flex;flex-direction:column;gap:0">
               <div class="form-row">
@@ -500,14 +472,14 @@
               </div>
               <div class="form-row">
                 <span class="form-label">Токен</span>
-                <input class="form-input" v-model="connForm.token" placeholder="оставить пустым если нет" style="flex:1;min-width:0">
+                <input class="form-input" v-model="connForm.token" placeholder="необязательно" style="flex:1;min-width:0">
               </div>
               <div class="form-row">
-                <span class="form-label">IP матрицы</span>
+                <span class="form-label">IP табло</span>
                 <input class="form-input" v-model="connForm.matrix_ip" placeholder="192.168.1.20" style="flex:1;min-width:0">
               </div>
               <div class="form-row">
-                <span class="form-label">Пароль матрицы</span>
+                <span class="form-label">Пароль табло</span>
                 <input class="form-input" v-model="connForm.matrix_pass" placeholder="guest" style="flex:1;min-width:0">
               </div>
               <div class="row" style="gap:8px;margin-top:8px">
@@ -545,21 +517,31 @@
               <span style="font-size:13px;font-weight:500;color:#424242;text-transform:uppercase;letter-spacing:.8px">Журнал доставки</span>
               <select v-model="pushLogFilter" class="form-input" style="font-size:12px;padding:2px 6px;height:auto;min-width:0;width:auto">
                 <option value="">все</option>
-                <option value="event">event</option>
-                <option value="push">push</option>
-                <option value="config">config</option>
-                <option value="adjust">adjust</option>
-                <option value="clock">clock</option>
-                <option value="reload">reload</option>
-                <option value="startup">startup</option>
+                <option value="event">Событие</option>
+                <option value="push">Ручная отправка</option>
+                <option value="config">Сохранение настроек</option>
+                <option value="adjust">Корректировка</option>
+                <option value="clock">Таймер</option>
+                <option value="reload">Перезагрузка</option>
+                <option value="startup">Запуск</option>
               </select>
+              <span style="font-size:12px;color:#9e9e9e;margin-left:auto">{{ filteredPushLog.length }} записей</span>
             </div>
             <div v-if="!filteredPushLog.length" style="font-size:13px;color:#9e9e9e">Нет записей</div>
-            <div v-for="entry in filteredPushLog" :key="entry.at + entry.trigger" style="font-size:13px;padding:4px 0;border-bottom:1px solid #f5f5f5;display:flex;gap:12px;align-items:center">
+            <div v-for="entry in pagedPushLog" :key="entry.at + entry.trigger" style="font-size:13px;padding:4px 0;border-bottom:1px solid #f5f5f5;display:flex;gap:12px;align-items:center">
               <span style="font-family:monospace;color:#9e9e9e;flex-shrink:0">{{ entry.at }}</span>
-              <span class="th-badge" style="font-size:11px;padding:2px 6px;flex-shrink:0">{{ entry.trigger || '—' }}</span>
+              <span class="th-badge" style="font-size:11px;padding:2px 6px;flex-shrink:0" :title="entry.trigger">{{ triggerLabel(entry.trigger) }}</span>
               <span :style="{ color: entry.ok ? '#388e3c' : '#c62828' }" style="flex-shrink:0">{{ entry.ok ? 'OK' : 'ОШИБКА' }}</span>
               <span v-if="!entry.ok" style="color:#424242;font-size:12px">{{ entry.error }}</span>
+            </div>
+            <div v-if="filteredPushLog.length > pushLogPerPage" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px">
+              <button class="icon-btn" :disabled="pushLogPage<=1" @click="pushLogPage--" type="button">
+                <i class="q-icon notranslate material-icons" style="font-size:18px">chevron_left</i>
+              </button>
+              <span style="color:#757575">{{ pushLogPage }} / {{ pushLogTotalPages }}</span>
+              <button class="icon-btn" :disabled="pushLogPage>=pushLogTotalPages" @click="pushLogPage++" type="button">
+                <i class="q-icon notranslate material-icons" style="font-size:18px">chevron_right</i>
+              </button>
             </div>
           </div>
         </div>
@@ -572,7 +554,7 @@
   <div class="modal-backdrop" v-if="modalIndex !== null && cfg" @click.self="closeLineModal">
     <div class="modal">
       <div class="modal__head">
-        <span class="modal__title">Настройка показателя — {{ modalLine.display_name }}</span>
+        <span class="modal__title">Настройка показателя - {{ modalLine.display_name }}</span>
         <button class="icon-btn" @click="closeLineModal" title="Закрыть" type="button">
           <i class="q-icon notranslate material-icons">close</i>
         </button>
@@ -788,7 +770,7 @@
               </div>
               <div v-if="!(triggersByIndicator[ind.key] || []).length"
                    style="font-size:12px;color:#9e9e9e">
-                Нет привязанных запросов — значение меняется вручную (±) или через API.
+                Нет привязанных запросов - значение меняется вручную (±) или через API.
               </div>
 
               

@@ -59,9 +59,26 @@ createApp({
     const status     = ref(null);
     const pushLog       = ref([]);
     const pushLogFilter = ref('');
+    const pushLogPage   = ref(1);
+    const pushLogPerPage = 20;
+    const _TRIGGER_LABELS = {
+      event:   'Событие',
+      push:    'Вручную',
+      config:  'Настройки',
+      adjust:  'Коррекция',
+      clock:   'Таймер',
+      reload:  'Перезагрузка',
+      startup: 'Запуск',
+    };
+    const triggerLabel = (t) => _TRIGGER_LABELS[t] || t || '—';
     const filteredPushLog = computed(() =>
       pushLogFilter.value ? pushLog.value.filter(e => e.trigger === pushLogFilter.value) : pushLog.value
     );
+    const pushLogTotalPages = computed(() => Math.max(1, Math.ceil(filteredPushLog.value.length / pushLogPerPage)));
+    const pagedPushLog = computed(() => {
+      const p = pushLogPage.value;
+      return filteredPushLog.value.slice((p - 1) * pushLogPerPage, p * pushLogPerPage);
+    });
     const saving     = ref(false);
     const pushing    = ref(false);
     const clearing   = ref(false);
@@ -102,7 +119,7 @@ createApp({
       if (!lp?.at) return '';
       return lp.ok
         ? `Последняя доставка: OK в ${lp.at}`
-        : `Последняя доставка: ОШИБКА в ${lp.at} — ${lp.error}`;
+        : `Последняя доставка: ОШИБКА в ${lp.at} - ${lp.error}`;
     });
     const deviceLabel = computed(() => {
       const d = cfg.value?.device;
@@ -595,6 +612,8 @@ createApp({
       }
     });
 
+    watch(pushLogFilter, () => { pushLogPage.value = 1; });
+
     watch([mini, devOpen, repOpen, tab, adjustStep], () => {
       LS.set(UI_KEY, {
         mini: mini.value,
@@ -650,6 +669,7 @@ createApp({
       mini, devOpen, repOpen,
       topNav, devNav, repNav, bottomNav,
       tab, cfg, stateData, status, pushLog, pushLogFilter, filteredPushLog,
+      pushLogPage, pushLogPerPage, pushLogTotalPages, pagedPushLog, triggerLabel,
       saving, pushing, clearing, adjustStep, cvs,
       hasDraft, discardDraft,
       dragIndex, dragOverIndex, modalIndex, modalLine,

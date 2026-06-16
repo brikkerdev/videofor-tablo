@@ -91,7 +91,7 @@ class Pusher:
                     else:
                         self._threshold_since.pop(ln.key, None)
                 else:
-                    if is_alert and not was_alert:
+                    if is_alert and (not was_alert or self._trigger == "event"):
                         self._threshold_since[ln.key] = now
                     since = self._threshold_since.get(ln.key)
                     if since and (now - since).total_seconds() >= duration:
